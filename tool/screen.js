@@ -33,6 +33,12 @@ export class Screen {
       const r = await fetch(`/build/battery/${n}.png`);
       this.batteryImgs.set(n, { img: await createImageBitmap(await r.blob()) });
     }));
+    // mouse pointer sprites (real NSCursor artwork, 4 px/pt; panel is 2 px/pt)
+    this.cursorImgs = new Map();
+    await Promise.all(Object.keys(this.S.cursorMeta || {}).map(async (n) => {
+      const r = await fetch(`/ref/cursor/${n}.png`);
+      this.cursorImgs.set(n, await createImageBitmap(await r.blob()));
+    }));
     const res = await fetch(this.S.desk);
     this.desk = await createImageBitmap(await res.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
     this.r.upload('desk', this.desk);
@@ -42,6 +48,20 @@ export class Screen {
     this.barBase = bc.getImageData(0, 0, G.BAR[2], G.BAR[3]);
     const px = this.barBase.data, i = (12 * G.BAR[2] + 150) * 4;
     this.barTint = `rgb(${px[i]},${px[i + 1]},${px[i + 2]})`;
+  }
+
+  cursorAt(f) {
+    const c = this.S.ui.cursor;
+    if (!c) return null;
+    return c[Math.min(Math.max(f - this.S.ui.startFrame, 0), c.length - 1)] || null;
+  }
+
+  _drawCursor(cur) {
+    const m = this.S.cursorMeta[cur[2]], im = this.cursorImgs.get(cur[2]);
+    if (!m || !im) return;
+    const k = 2 / m.scale, s = this.S.ui.cssScale || 1.5;
+    const ctx = this.winCanvas.getContext('2d');
+    ctx.drawImage(im, cur[0] * s - m.hx * 2, cur[1] * s - m.hy * 2, im.width * k, im.height * k);
   }
 
   uiName(f) {
@@ -81,7 +101,8 @@ export class Screen {
     const scr = c.screen || { kind: 'mock', cards: [] };
     const d = { win: null, bar: null };
     if (scr.kind === 'ui' || scr.kind === 'ui_v1') {
-      d.win = { ui: this.uiName(loc.clip.f0 + loc.lf) };     // captured UI, indexed by film frame
+      const f = loc.clip.f0 + loc.lf;
+      d.win = { ui: this.uiName(f), cur: this.cursorAt(f) };     // captured UI + pointer, indexed by film frame
     } else {
       const cards = [];
       for (const k of scr.cards || []) {
@@ -125,7 +146,9 @@ export class Screen {
       const e = this.load(d.win.ui);
       if (!e.bmp) { if (wait) await e.p; else ok = false; }
       if (e.bmp) {
-        if (d.win.cards) this._drawMock(e.bmp, d.win); else this.r.upload('win', e.bmp);
+        if (d.win.cards) this._drawMock(e.bmp, d.win);
+        else if (d.win.cur) { this.winCanvas.getContext('2d').drawImage(e.bmp, 0, 0); this._drawCursor(d.win.cur); this.r.upload('win', this.winCanvas); }
+        else this.r.upload('win', e.bmp);
         this.winKey = wk;
       }
     }

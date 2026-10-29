@@ -93,14 +93,14 @@ export function compView(py, typed, zh) {
 
 export const Q1 = [
   { py: 'nijuede', zh: '你觉得' }, { py: 'zhege', zh: '这个' }, { py: 'shijieshang', zh: '世界上' }, { py: 'zuiweida', zh: '最伟大' },
-  { py: 'de', zh: '的' }, { py: 'sigezi', zh: '四个字' }, { py: 'shishenme', zh: '是什么' }, { punct: '。' }, { pause: 0.45 },
+  { py: 'de', zh: '的' }, { py: 'sigezi', zh: '四个字' }, { py: 'shishenme', zh: '是什么' }, { punct: '。' }, { pause: 0.45 },   // IME still in Chinese punctuation: fixed later with the mouse
   { py: 'buxuyao', zh: '不需要' }, { py: 'liyou', zh: '理由' }, { punct: ',' }, { pause: 0.2 }, { py: 'zhijie', zh: '直接' },
-  { py: 'huida', zh: '回答' }, { py: 'wo', zh: '我' }, { punct: '。' },
+  { py: 'huida', zh: '回答' }, { py: 'wo', zh: '我' }, { punct: '.' },
 ];
 // 英特纳雄耐尔 is not in the IME's dictionary: typed in chunks, the 2nd candidate picked twice
 export const Q3 = [
   { py: 'yingte', zh: '英特' }, { py: 'naxiong', zh: '纳雄', pick: 2 }, { py: 'naier', zh: '耐尔', pick: 2 },
-  { py: 'shifou', zh: '是否' }, { py: 'neng', zh: '能' }, { py: 'shixian', zh: '实现' }, { punct: '？' },
+  { py: 'shifou', zh: '是否' }, { py: 'neng', zh: '能' }, { py: 'shixian', zh: '实现' }, { punct: '?' },
 ];
 export const Q2 = [
   { py: 'youren', zh: '有人' }, { py: 'hui', zh: '会' }, { py: 'buxin', zh: '不信' }, { punct: ',' }, { pause: 0.25 },

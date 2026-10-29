@@ -114,10 +114,69 @@ def _ui(name):
     return cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
 
 
+def _ix(f):
+    return min(max(f - _idx['startFrame'], 0), len(_idx['frames']) - 1)
+
+
 def ui_name(f):
-    fr = _idx['frames']
-    f = min(max(f - _idx['startFrame'], 0), len(fr) - 1)
-    return fr[f]
+    return _idx['frames'][_ix(f)]
+
+
+def cursor_at(f):
+    """pointer for frame f: (x, y, shape) in css px of the captured window, or None (hidden)."""
+    c = _idx.get('cursor')
+    if not c:
+        return None
+    v = c[_ix(f)]
+    return tuple(v) if v else None
+
+
+def subframes(f):
+    """screen refreshes during frame f (120 Hz) when something moved: [(ui name, cursor), ...]; None otherwise.
+    Sub k is shown from f/FPS + k/(FPS*K) for 1/(FPS*K) s."""
+    s = (_idx.get('subframes') or {}).get(str(_ix(f) + _idx['startFrame']))
+    return [(n, tuple(c) if c else None) for n, c in s] if s else None
+
+
+# ---- mouse pointer: real macOS NSCursor artwork (ref/cursor, rendered at 4 px/pt); the panel is 2 px/pt
+CSS_SCALE = 1.5                 # captured window: css px -> panel px
+
+
+@functools.lru_cache(maxsize=4)
+def _cursor_sprite(shape):
+    meta = json.load(open(f'{ROOT}/ref/cursor/meta.json'))[shape]
+    im = cv2.imread(f'{ROOT}/ref/cursor/{shape}.png', cv2.IMREAD_UNCHANGED).astype(np.float32) / 255
+    k = 2.0 / meta['scale']
+    im[..., :3] *= im[..., 3:4]                                # PNG is straight alpha: premultiply before filtering
+    im = cv2.resize(im, (round(im.shape[1] * k), round(im.shape[0] * k)), interpolation=cv2.INTER_AREA)
+    a = im[..., 3:4]
+    rgb = cv2.cvtColor(im[..., :3], cv2.COLOR_BGR2RGB)      # premultiplied
+    return rgb * 255, a, meta['hx'] * 2, meta['hy'] * 2
+
+
+def draw_cursor(P, cur):
+    """composite the pointer onto a panel image (uint8 RGB, panel coords incl. notch strip)."""
+    if not cur:
+        return P
+    x, y, shape = cur
+    rgb, a, hx, hy = _cursor_sprite(shape)
+    px = WIN_X + x * CSS_SCALE - hx
+    py = NOTCH + WIN_Y + y * CSS_SCALE - hy
+    ix, iy = int(np.floor(px)), int(np.floor(py))
+    fx_, fy_ = px - ix, py - iy
+    M = np.float32([[1, 0, fx_], [0, 1, fy_]])               # sub-pixel placement
+    h, w = a.shape[:2]
+    rgb = cv2.warpAffine(rgb, M, (w + 1, h + 1)); a = cv2.warpAffine(a[..., 0], M, (w + 1, h + 1))[..., None]
+    h, w = a.shape[:2]
+    x0, y0 = max(ix, 0), max(iy, NOTCH)
+    x1, y1 = min(ix + w, PANEL_W), min(iy + h, PANEL_H)
+    if x1 <= x0 or y1 <= y0:
+        return P
+    P = P.copy()
+    sub = P[y0:y1, x0:x1].astype(np.float32)
+    s_rgb = rgb[y0 - iy:y1 - iy, x0 - ix:x1 - ix]; s_a = a[y0 - iy:y1 - iy, x0 - ix:x1 - ix]
+    P[y0:y1, x0:x1] = np.clip(s_rgb + sub * (1 - s_a), 0, 255).astype(np.uint8)
+    return P
 
 
 @functools.lru_cache(maxsize=16)
@@ -170,9 +229,11 @@ def clock_file(clk):
     return m['file']
 
 
-def panel(f):
+def panel(f, sub=None):
+    """sub = (ui name, cursor) of one screen refresh inside frame f; default = the frame's own."""
     t = f / FPS
-    return panel_cached(ui_name(f), clock_string(t), battery_state(f))
+    name, cur = sub if sub else (ui_name(f), cursor_at(f))
+    return draw_cursor(panel_cached(name, clock_string(t), battery_state(f)), cur)
 
 
 if __name__ == '__main__':

@@ -210,6 +210,15 @@ def main():
         ck = [(k['t'] - clip.t0, k['key']) for k in keys if k.get('clip', 'A') == clip.id]
         rng = np.random.default_rng(20261030 + 97 * i)
         out[s0:s1] = segment(clip, ck, rng, enter, s1 - s0)
+        # recorded effects for this clip (render/sfx.py -> build/sfx_<clip>.wav, clip-local, 48k stereo float)
+        sp = f'{ROOT}/build/sfx_{clip.id}.wav'
+        if clip.raw.get('lighter') and os.path.exists(sp):
+            import scipy.io.wavfile as wf
+            sr_, st = wf.read(sp)
+            assert sr_ == SR and st.ndim == 2
+            n = min(len(st), s1 - s0)
+            out[s0:s0 + n] += st[:n]
+            print(f'  + sfx_{clip.id}.wav ({len(st) / SR:.2f}s)')
         if clip.stop is not None:
             zero_ranges.append((s0 + int(round((clip.stop + ZERO_AFTER_TAP) * SR)), s1))
     peak = np.abs(out).max()

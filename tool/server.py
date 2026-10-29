@@ -24,7 +24,7 @@ PORT = int(os.environ.get('PORT', 8765))
 SB_PATH = os.path.join(ROOT, 'storyboard.json')
 HIST = os.path.join(ROOT, 'storyboard_history')
 CACHE = os.path.join(ROOT, 'cache')
-ALLOWED = ('/tool/', '/build/ui_frames/', '/build/clock/', '/build/battery/', '/build/audio.wav', '/build/smudge.png', '/build/sfx_', '/cache/')
+ALLOWED = ('/tool/', '/build/ui_frames/', '/build/clock/', '/build/battery/', '/build/audio.wav', '/build/smudge.png', '/build/sfx_', '/cache/', '/ref/cursor/')
 _phys_lock = threading.Lock()
 
 
@@ -61,7 +61,8 @@ def state():
         'anchors': camera.ANCHORS,
         'consts': {'FPS': camera.FPS, 'PP': camera.PP, 'FX_MAIN': camera.FX_MAIN, 'FX_MACRO': camera.FX_MACRO},
         'noise': noise,
-        'ui': {'startFrame': idx['startFrame'], 'frames': idx['frames']},
+        'ui': {'startFrame': idx['startFrame'], 'frames': idx['frames'], 'cursor': idx.get('cursor'), 'cssScale': 1.5},
+        'cursorMeta': json.load(open(os.path.join(ROOT, 'ref/cursor/meta.json'))),
         'clock': clock,
         'exposure': expo,
         'geom': {'PANEL_W': compose.PANEL_W, 'PANEL_H': compose.PANEL_H, 'NOTCH': compose.NOTCH,

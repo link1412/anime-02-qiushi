@@ -49,20 +49,44 @@ def panel_linear(key):
     return _lut[P]  # H,W,3 float32
 
 
-def panel_for_frame(f):
-    # cache key by composed content (ui file + clock string + battery)
+def panel_for_frame(f, sub=None):
+    # cache key by composed content (ui file + pointer + clock string + battery)
     t = f / FPS
-    k = (compose.ui_name(f), compose.clock_string(t), compose.battery_state(f))
-    return _panel_by_key(k, f)
+    name, cur = sub if sub else (compose.ui_name(f), compose.cursor_at(f))
+    k = (name, cur, compose.clock_string(t), compose.battery_state(f))
+    return _panel_by_key(k, f, sub)
 
 
 _pcache = {}
-def _panel_by_key(k, f):
+def _panel_by_key(k, f, sub=None):
     if k not in _pcache:
-        if len(_pcache) > 2:
+        if len(_pcache) > 6:
             _pcache.pop(next(iter(_pcache)))
-        _pcache[k] = _lut[compose.panel(f)]
+        _pcache[k] = _lut[compose.panel(f, sub)]
     return _pcache[k]
+
+
+def lcd_exposed(f, Plin, X, Y, k_m, shut, own_panel=False):
+    """LCD light reaching each sensor row during its exposure. When the screen changed within the frame
+    (pointer moving, page scrolling: captured as 120 Hz refreshes), every row integrates the refreshes it
+    overlaps: rows are read top to bottom over RS, each exposed for `shut` -> smear + rolling-shutter shear.
+    The phone exposure is centred half a frame after the screen frame starts (a fixed phase)."""
+    subs = None if own_panel else compose.subframes(f)
+    if not subs:
+        return lcd_sample(Plin, X, Y, k_m)
+    K = len(subs); h = X.shape[0]
+    c = 0.5 / FPS + RS * (np.arange(h, dtype=np.float32) / max(h - 1, 1) - 0.5)
+    lo, hi = c - shut / 2, c + shut / 2
+    W = np.stack([np.clip(np.minimum(hi, (k + 1) / (FPS * K)) - np.maximum(lo, k / (FPS * K)), 0, None) for k in range(K)])
+    W /= np.maximum(W.sum(0, keepdims=True), 1e-9)
+    acc = None; inside = None
+    for k in range(K):
+        if float(W[k].max()) < 1e-4:
+            continue
+        img, inside = lcd_sample(panel_for_frame(f, subs[k]), X, Y, k_m)
+        img *= W[k][:, None, None]
+        acc = img if acc is None else acc + img
+    return acc, inside
 
 
 @functools.lru_cache(maxsize=4)
@@ -217,7 +241,7 @@ def render(f, exposure, seed=0, preview=False, panel=None, state=None):
         cocs = coc_px(S, sf, macro) * (sw / OW) / 2.4        # sigma in sensor px
         sig = np.sqrt(0.55 ** 2 + cocs ** 2)
         k_m = np.exp(-2 * (math.pi ** 2) * (sig * fp) ** 2).astype(np.float32)[..., None]
-        img, inside = lcd_sample(Plin, X, Y, k_m[..., 0])
+        img, inside = lcd_exposed(f, Plin, X, Y, k_m[..., 0], shut, own_panel=panel is not None)
         acc = img if acc is None else acc + img
     img = acc / nt
     if not preview:
@@ -343,7 +367,7 @@ def render_v2(f, exposure, seed=0, panel=None, state=None):
         cocs = coc_px(S, sf, macro) * (sw / OW) / 2.4
         sig = np.sqrt(0.55 ** 2 + cocs ** 2)
         k_m = np.exp(-2 * (math.pi ** 2) * (sig * fp) ** 2).astype(np.float32)
-        img, _ = lcd_sample(Plin, X, Y, k_m)
+        img, _ = lcd_exposed(f, Plin, X, Y, k_m, shut, own_panel=panel is not None)
         acc = img if acc is None else acc + img
     img = acc / nt
     # optical defocus happens before the sensor samples anything
