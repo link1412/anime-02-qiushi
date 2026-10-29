@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>实事求是 · 分镜预览</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --bg:#16171d; --panel:#1e1f27; --line:#2c2e3a; --fg:#d8d8e0; --dim:#8a8ca0; --acc:#bd93f9; --warn:#ffb86c; --red:#ff5555; --ok:#50fa7b; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:13px/1.4 -apple-system, "PingFang SC", sans-serif; }
+  body { display:grid; grid-template-rows: 40px 1fr 168px; grid-template-columns: 1fr 360px; grid-template-areas: "hd hd" "view insp" "tl tl"; }
+  header { grid-area:hd; display:flex; align-items:center; gap:10px; padding:0 12px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:14px; font-weight:600; margin:0 8px 0 0; }
+  header .sp { flex:1; }
+  #status { color:var(--dim); }
+  #status.dirty { color:var(--warn); }
+  #err { color:var(--red); }
+  button { background:#2a2c38; color:var(--fg); border:1px solid #3a3d4d; border-radius:5px; padding:3px 9px; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--acc); }
+  button.on { background:#3b3156; border-color:var(--acc); }
+  button.primary { background:#4b3b78; border-color:var(--acc); }
+  #view { grid-area:view; display:flex; flex-direction:column; min-width:0; min-height:0; padding:8px; gap:6px; }
+  #stageWrap { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; }
+  #stage { position:relative; aspect-ratio:16/9; max-width:100%; max-height:100%; height:100%; background:#000; cursor:grab; touch-action:none; }
+  #stage.dragging { cursor:grabbing; }
+  #stage canvas, #stage img { position:absolute; inset:0; width:100%; height:100%; }
+  #phys { display:none; pointer-events:none; }
+  #phys.show { display:block; }
+  #hud { position:absolute; left:10px; top:8px; right:10px; pointer-events:none; font-size:12px; text-shadow:0 1px 2px #000; display:flex; justify-content:space-between; gap:12px; }
+  #hud .tag { background:rgba(255,184,108,.85); color:#000; border-radius:3px; padding:0 5px; margin-left:6px; text-shadow:none; }
+  #hud.off { display:none; }
+  #hint { position:absolute; left:10px; bottom:8px; font-size:11px; color:#ccc; text-shadow:0 1px 2px #000; pointer-events:none; }
+  #transport { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  #tc { font:12px ui-monospace, Menlo, monospace; min-width:250px; }
+  #insp { grid-area:insp; border-left:1px solid var(--line); overflow:auto; padding:8px 10px 40px; background:var(--panel); }
+  #insp h3 { font-size:12px; color:var(--acc); margin:14px 0 6px; font-weight:600; display:flex; align-items:center; gap:6px; }
+  #insp h3 .sp { flex:1; }
+  #live { font:11px ui-monospace, Menlo, monospace; color:var(--dim); white-space:pre; }
+  .row { display:flex; align-items:center; gap:6px; margin:3px 0; }
+  .row label { width:62px; color:var(--dim); flex:none; }
+  .row input, .row textarea, .row select { flex:1; min-width:0; background:#14151b; color:var(--fg); border:1px solid #333646; border-radius:4px; padding:3px 5px; font:12px ui-monospace, Menlo, monospace; }
+  .row input.bad, .row textarea.bad { border-color:var(--red); }
+  textarea { resize:vertical; }
+  table.keys { width:100%; border-collapse:collapse; font:11px ui-monospace, Menlo, monospace; }
+  table.keys td { padding:2px 4px; border-bottom:1px solid #262833; cursor:pointer; white-space:nowrap; }
+  table.keys tr.sel td { background:#3b3156; }
+  table.keys tr:hover td { background:#2a2c38; }
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:2px 10px; }
+  .grid2 .row label { width:42px; }
+  .card { border:1px solid #333646; border-radius:6px; padding:6px; margin:6px 0; }
+  .card.active { border-color:var(--warn); }
+  .small { font-size:11px; color:var(--dim); }
+  #tl { grid-area:tl; border-top:1px solid var(--line); position:relative; }
+  #tl canvas { width:100%; height:100%; display:block; }
+  #help { position:fixed; inset:60px 25% auto; background:#1e1f27f0; border:1px solid var(--acc); border-radius:10px; padding:16px 22px; display:none; z-index:9; }
+  #help.show { display:block; }
+  #help kbd { background:#2a2c38; border:1px solid #444; border-radius:3px; padding:0 4px; font:11px ui-monospace, Menlo, monospace; }
+  #help td { padding:2px 10px 2px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>实事求是 · 分镜预览</h1>
+  <button id="bSave" class="primary" title="⌘S">保存</button>
+  <button id="bUndo" title="⌘Z">撤销</button>
+  <button id="bRedo" title="⇧⌘Z">重做</button>
+  <span id="status">已保存</span>
+  <span id="err"></span>
+  <span class="sp"></span>
+  <button id="bHelp">快捷键 ?</button>
+</header>
+
+<section id="view">
+  <div id="stageWrap">
+    <div id="stage">
+      <canvas id="gl" width="1920" height="1080"></canvas>
+      <img id="phys" alt="">
+      <div id="hud"><div id="hudL"></div><div id="hudR"></div></div>
+      <div id="hint">拖动 = 移动取景 · 滚轮 = 推拉距离 · ⌥拖动 = 偏航/俯仰 · ⇧滚轮 = 横滚（自动在播放头建关键帧）</div>
+    </div>
+  </div>
+  <div id="transport">
+    <button id="bPlay" title="空格">▶ 播放</button>
+    <button id="bLoop" title="L">本段循环</button>
+    <button id="bMute">声音 开</button>
+    <span id="tc"></span>
+    <span class="sp" style="flex:1"></span>
+    <button id="oPhys" class="on" title="子像素 / 噪点">物理效果</button>
+    <button id="oBlur" class="on">运动模糊</button>
+    <button id="oDof" class="on">景深</button>
+    <button id="oMarkers" class="on">占位标记</button>
+    <button id="oHud" class="on">HUD</button>
+    <button id="oHalf">半分辨率</button>
+    <button id="bPhysR" title="P">物理渲染本帧</button>
+    <button id="bCmp" title="按住 C">对比</button>
+  </div>
+</section>
+
+<aside id="insp">
+  <div id="live"></div>
+  <div id="clipBox"></div>
+</aside>
+
+<footer id="tl"><canvas id="tlc"></canvas></footer>
+
+<div id="help">
+  <h3 style="margin-top:0">快捷键</h3>
+  <table>
+    <tr><td><kbd>空格</kbd></td><td>播放 / 暂停</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>上一帧 / 下一帧（⇧ = 1 秒）</td></tr>
+    <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>上一段 / 下一段开头</td></tr>
+    <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>上一个 / 下一个关键帧</td></tr>
+    <tr><td><kbd>K</kbd></td><td>在播放头加关键帧</td></tr>
+    <tr><td><kbd>⌫</kbd></td><td>删除选中的关键帧</td></tr>
+    <tr><td><kbd>L</kbd></td><td>本段循环</td></tr>
+    <tr><td><kbd>P</kbd> / 按住 <kbd>C</kbd></td><td>物理渲染本帧 / 与物理渲染对比</td></tr>
+    <tr><td><kbd>⌘S</kbd> <kbd>⌘Z</kbd> <kbd>⇧⌘Z</kbd></td><td>保存 / 撤销 / 重做</td></tr>
+    <tr><td>时间轴</td><td>点击/拖动 = 定位；拖关键帧 ◆ = 改时间；滚轮 = 缩放；横向滚动 = 平移；双击段 = 缩放到该段</td></tr>
+    <tr><td>画面</td><td>拖动 = 移动取景；滚轮 = 推拉；⌥拖动 = 偏航/俯仰；⇧滚轮 = 横滚</td></tr>
+  </table>
+  <p class="small">预览是实时近似；最终画面以 render/render.py 物理渲染为准（可用“物理渲染本帧”对比，仅主镜头）。追加段的屏幕内容是占位卡片，要抓真实界面帧后替换。</p>
+</div>
+
+<script type="module" src="/tool/app.js"></script>
+</body>
+</html>
