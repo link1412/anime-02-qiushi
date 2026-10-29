@@ -8,7 +8,7 @@ const SEG = {
   zhengming: 'zheng ming', zheshinishuode: 'zhe shi ni shuo de', ne: 'ne',
   yingte: 'ying te', naxiong: 'na xiong', naier: 'nai er', shifou: 'shi fou', neng: 'neng', shixian: 'shi xian',
   jinwan: 'jin wan', chishenme: 'chi shen me',
-  shijie: 'shi jie', shi: 'shi', moni: 'mo ni', chulai: 'chu lai', ma: 'ma',
+  zaoshang: 'zao shang', shijie: 'shi jie', shi: 'shi', moni: 'mo ni', chulai: 'chu lai', ma: 'ma',
 };
 const ALT = { // single-char homophones of first syllable, as an IME would list
   ni: ['你', '尼', '泥', '拟', '逆'], zhe: ['这', '着', '者', '折', '哲'], shi: ['是', '时', '事', '使', '市'],
@@ -18,7 +18,7 @@ const ALT = { // single-char homophones of first syllable, as an IME would list
   ru: ['如', '入', '乳', '儒', '茹'], zheng: ['正', '证', '整', '政', '争'], ne: ['呢', '哪', '讷', '那', '呐'],
   ying: ['英', '应', '影', '硬', '营'], na: ['那', '拿', '纳', '哪', '娜'], nai: ['耐', '奶', '乃', '奈', '氖'],
   neng: ['能', '嫩', '恁', '能', '䏻'], jin: ['今', '进', '金', '近', '仅'], chi: ['吃', '迟', '持', '池', '尺'],
-  mo: ['摹', '模', '摸', '磨', '魔'], chu: ['出', '处', '初', '除', '触'], ma: ['吗', '妈', '马', '码', '嘛'],
+  zao: ['早', '造', '找', '照', '遭'], mo: ['摹', '模', '摸', '磨', '魔'], chu: ['出', '处', '初', '除', '触'], ma: ['吗', '妈', '马', '码', '嘛'],
 };
 const FULLALT = { // extra multi-char candidates for the full phrase
   nijuede: ['你觉得', '你觉', '你决', '你'], zhege: ['这个', '这', '者', '折'], shijieshang: ['世界上', '世界', '视界', '是'],
@@ -31,7 +31,7 @@ const FULLALT = { // extra multi-char candidates for the full phrase
   yingte: ['英特', '英', '应', '影'], naxiong: ['那熊', '纳雄', '拿', '那'], naier: ['奈尔', '耐尔', '奶', '耐'],
   shifou: ['是否', '是', '时', '事'], neng: ['能', '嫩', '恁', '䏻'], shixian: ['实现', '时限', '视线', '是'],
   jinwan: ['今晚', '金碗', '今', '进'], chishenme: ['吃什么', '吃', '迟', '持'],
-  shijie: ['世界', '视界', '事件', '是'], shi: ['是', '时', '事', '使'], moni: ['摹拟', '模拟', '魔你', '模'],
+  zaoshang: ['早上', '早', '造', '找'], shijie: ['世界', '视界', '事件', '是'], shi: ['是', '时', '事', '使'], moni: ['摹拟', '模拟', '魔你', '模'],
   chulai: ['出来', '出', '处', '初'], ma: ['吗', '嘛', '妈', '马'],
 };
 
@@ -113,6 +113,8 @@ export const Q0 = [{ py: 'zhege', zh: '这个' }, { py: 'shijie', zh: '世界' }
   { py: 'chulai', zh: '出来' }, { py: 'de', zh: '的' }, { py: 'ma', zh: '吗' }, { punct: '?' }];
 // third try, sent: typed after 英特纳雄耐尔是否能实现? was deleted character by character
 export const Q4 = [{ py: 'jinwan', zh: '今晚' }, { py: 'chishenme', zh: '吃什么' }, { punct: '?' }];
+// clip K, the last message (answer: This organization has been disabled. = 闭门羹)
+export const Q5 = [{ py: 'zaoshang', zh: '早上' }, { py: 'chishenme', zh: '吃什么' }, { punct: '?' }];
 export const Q2 = [
   { py: 'youren', zh: '有人' }, { py: 'hui', zh: '会' }, { py: 'buxin', zh: '不信' }, { punct: ',' }, { pause: 0.25 },
   { py: 'wo', zh: '我' }, { py: 'ruhe', zh: '如何' }, { py: 'zhengming', zh: '证明', typo: { wrong: 'zhengmign', back: 2 } },

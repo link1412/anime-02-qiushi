@@ -1164,7 +1164,7 @@
    "shots": [
     {
      "t": 0,
-     "label": "S8e 一夜过去：屏幕反光由暖变冷"
+     "label": "S8e 天亮：“今晚”结束了，问题变成“早上吃什么”"
     }
    ],
    "keys": [
@@ -1340,7 +1340,7 @@
   },
   {
    "id": "Y1",
-   "title": "S8h 16 · 远",
+   "title": "S8h 16 · 远：早上吃什么 → 16:8 轻断食 → 16",
    "dur": "Y1_DUR+0",
    "seed": 13,
    "screen": {
@@ -1378,7 +1378,7 @@
    "shots": [
     {
      "t": 0,
-     "label": "S8h 思考开始只剩 16"
+     "label": "S8h 早上吃什么 → 16:8 轻断食 → 16"
     }
    ],
    "keys": [
@@ -1532,7 +1532,7 @@
   },
   {
    "id": "K",
-   "title": "S9 403：continue → whats the matter → hello? → organization disabled",
+   "title": "S9 403：continue → whats the matter → 早上吃什么? → organization disabled（早饭吃了闭门羹）",
    "dur": "K_DUR+0",
    "seed": 10,
    "screen": {
@@ -1621,7 +1621,7 @@
     },
     {
      "t": "K_SEND3+0",
-     "label": "S9 hello? → This organization has been disabled."
+     "label": "S9 早上吃什么? → This organization has been disabled."
     },
     {
      "t": "K_ERR3+1.6",

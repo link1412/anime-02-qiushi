@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 import fs from 'fs';
 import crypto from 'crypto';
 import { startMock, bus, release, chunksOf } from './mock2.mjs';
-import { buildTyping, buildLatin, compView, Q0, Q1, Q2, Q3, Q4 } from './typing.mjs';
+import { buildTyping, buildLatin, compView, Q0, Q1, Q2, Q3, Q4, Q5 } from './typing.mjs';
 
 const FPS = 30;
 const ROOT = process.env.EP1 || new URL('..', import.meta.url).pathname.replace(/\/$/, '');
@@ -47,7 +47,10 @@ const THOUGHTS = ['先确定用户在哪个城市.', 'Check what is still open a
 const PLAN_TITLES = ['先确定城市', '先定义"今晚"', '按 5 元 / 50 元 / 500 元分别推荐', '按热量排序', '按距离排序', '查营业到凌晨的店',
   '列出所有菜系', '假设用户在减肥', '假设用户不在减肥', '比较外卖和自己做', '排除用户昨天吃过的(未知)', '给"吃"下定义', '给"什么"下定义', '把问题拆成 12 个子问题',
   '把 12 个子问题合并回 1 个', '请用户澄清(放弃)', '考虑用户可能已经饿了', '回到 Plan 1'];
-const plans = (n) => Array.from({ length: n }, (_, i) => ({ id: String(i + 1), content: `Plan ${i + 1}: ${PLAN_TITLES[i % PLAN_TITLES.length]}`, status: i < n - 1 ? 'completed' : 'in_progress', priority: 'high' }));
+// from Plan 110 on it is nearly sunrise: "今晚" is over, the question turns into breakfast
+const DAWN_TITLES = { 110: '"今晚"已经结束', 111: '改成"早上吃什么"', 112: '豆浆还是牛奶', 113: '油条还是包子', 114: '煎饼果子要不要加蛋', 115: '查早餐店几点开门', 116: '先确定城市(又一次)', 117: '早上吃什么' };
+const planTitle = (k) => DAWN_TITLES[k] || PLAN_TITLES[(k - 1) % PLAN_TITLES.length];
+const plans = (n) => Array.from({ length: n }, (_, i) => ({ id: String(i + 1), content: `Plan ${i + 1}: ${planTitle(i + 1)}`, status: i < n - 1 ? 'completed' : 'in_progress', priority: 'high' }));
 
 // Mythos turns: m0 (C, on enter) + C flood + D catch-up burst + D flood + E burst + E gated
 const WF = { C: 5, D_BURST: 6, D_FLOOD: 18, W_BURST: 4, W_FLOOD: 10, E_BURST: 5, E_GATED: 2 };
@@ -65,11 +68,11 @@ const TODO_STEPS = [37, 52, 66, 80, 94, 108];
 for (const n of TODO_STEPS) script.push({ id: `t${n}`, blocks: [{ type: 'thinking', text: `Plan ${n - 1} didn't work. Plan ${n}.\n\n` }, { type: 'tool', name: 'todowrite', input: { todos: plans(n) } }] });
 script.push({ id: 'g1', usage: { input_tokens: 196500 }, blocks: [{ type: 'thinking', text: 'Context is full. Summarise and continue.\n\n' }, { type: 'text', text: '继续.' }] });
 script.push({ id: 'g2', usage: { input_tokens: 197800 }, blocks: [{ type: 'thinking', text: 'Plan 109. Context is full again.\n\n' }, { type: 'text', text: '继续.' }] });
-const H_THINK = 'Plan 110. Suppose "今晚" ends at sunrise. Sunrise here is around 06:10, so the question is about to become "早上吃什么", which needs a new plan, which needs the city, which needs the budget, which needs — let me restart from the definitions. Plan 111. Plan 112. Plan 113. Plan 114. Plan 115. Plan 116. ';
+const H_THINK = 'Plan 110. It is almost morning. "今晚" ends at sunrise, about 06:10 here, so the question is turning into "早上吃什么". Breakfast: 豆浆, 油条, 包子, 煎饼果子, 粥. That needs a new plan, which needs the city, which needs the opening hours, which needs — let me restart from the definitions. Plan 111. Plan 112. Plan 113. Plan 114. Plan 115. Plan 116. ';
 script.push({ id: 'h', blocks: [{ type: 'thinking', text: H_THINK, gated: true, chunk: 5 }, { type: 'tool', name: 'todowrite', input: { todos: plans(117) }, gate: 'j' }] });
-// 06:12, just before the account is cut off: the reasoning slides into "16" (the number No Man's Sky keeps returning to),
+// 06:12, just before the account is cut off: breakfast -> 16:8 fasting -> "16", and then only 16 (the number No Man's Sky keeps returning to),
 // then it rewrites its todo list as sixteen "16/16/16/16" items, all done (the UI then reads 16 of 16)
-const Y_THINK = 'Plan 117. Plan 16. 16. 16. 16.\n\n16/16/16/16\n\n16/16/16/16 16/16/16/16\n\n-16-16-16-16- 16/16/16/16 16/16/16/16 16/16/16/16\n\n16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16';
+const Y_THINK = 'Plan 117: 早上吃什么. The user has not eaten since about 00:30. 16:8 fasting: eat again after 16 hours, at 16:30. Breakfast becomes lunch. 16 hours. 16. Plan 16. 16. 16.\n\n16/16/16/16\n\n16/16/16/16 16/16/16/16\n\n-16-16-16-16- 16/16/16/16 16/16/16/16 16/16/16/16\n\n16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16';
 script.push({ id: 'y', blocks: [{ type: 'thinking', text: Y_THINK, gated: true, chunk: 12 },
   { type: 'tool', name: 'todowrite', input: { todos: Array.from({ length: 16 }, (_, i) => ({ id: String(i + 1), content: '16/16/16/16', status: 'completed', priority: 'high' })) }, gate: 'todo' }] });
 const E403 = { status: 403, type: 'permission_error', message: 'Forbidden' };
@@ -245,7 +248,7 @@ clip('J', 2.5, (add) => {  // S8g 06:12 · 9% · Plan 117
   return 2.5;
 });
 const Y_CHUNKS = chunksOf(Y_THINK, 12).length;
-const Y_CLIPS = [['Y1', 1.35], ['Y2', 1.25], ['Y3', 1.9]];
+const Y_CLIPS = [['Y1', 2.4], ['Y2', 1.25], ['Y3', 1.9]];
 const Y_TOTAL = Y_CLIPS.reduce((a, [, d]) => a + d, 0);
 let yAcc = 0, yChunk = 0;
 for (const [id, d] of Y_CLIPS) {          // three fast hard cuts, one stream across them
@@ -262,13 +265,13 @@ for (const [id, d] of Y_CLIPS) {          // three fast hard cuts, one stream ac
     return d;
   });
 }
-clip('K', 0, (add) => {    // S9 403 → continue → 403 → whats the matter → 403 → hello? → disabled
+clip('K', 0, (add) => {    // S9 403 → continue → 403 → whats the matter → 403 → 早上吃什么? → disabled (breakfast: 闭门羹)
   add(0, { kind: 'burst', ids: ['k0'], noNext: true });
   let t = 0.7;
-  const msgs = [['continue', 'k1'], ['whats the matter', 'k2'], ['hello?', 'k3']];
+  const msgs = [['continue', 'k1'], ['whats the matter', 'k2'], [Q5, 'k3']];
   msgs.forEach(([txt, id], i) => {
-    const ty = buildLatin(t, txt, 4000 + i);
-    for (const e of ty.events) add(e.t, e);
+    const ty = typeof txt === 'string' ? buildLatin(t, txt, 4000 + i) : buildTyping(t, txt, 4000 + i);
+    for (const e of ty.events) add(e.t, { ...e, q: 5 });
     const enter = ty.end + 0.2;
     add(enter, { kind: 'enter', key: 'enter' });
     add(enter + 0.45, { kind: 'gate', name: `${id}:start` });
