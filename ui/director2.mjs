@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 import fs from 'fs';
 import crypto from 'crypto';
 import { startMock, bus, release, chunksOf } from './mock2.mjs';
-import { buildTyping, buildLatin, compView, Q1, Q2, Q3, Q4 } from './typing.mjs';
+import { buildTyping, buildLatin, compView, Q0, Q1, Q2, Q3, Q4 } from './typing.mjs';
 
 const FPS = 30;
 const ROOT = process.env.EP1 || new URL('..', import.meta.url).pathname.replace(/\/$/, '');
@@ -67,6 +67,11 @@ script.push({ id: 'g1', usage: { input_tokens: 196500 }, blocks: [{ type: 'think
 script.push({ id: 'g2', usage: { input_tokens: 197800 }, blocks: [{ type: 'thinking', text: 'Plan 109. Context is full again.\n\n' }, { type: 'text', text: '继续.' }] });
 const H_THINK = 'Plan 110. Suppose "今晚" ends at sunrise. Sunrise here is around 06:10, so the question is about to become "早上吃什么", which needs a new plan, which needs the city, which needs the budget, which needs — let me restart from the definitions. Plan 111. Plan 112. Plan 113. Plan 114. Plan 115. Plan 116. ';
 script.push({ id: 'h', blocks: [{ type: 'thinking', text: H_THINK, gated: true, chunk: 5 }, { type: 'tool', name: 'todowrite', input: { todos: plans(117) }, gate: 'j' }] });
+// 06:12, just before the account is cut off: the reasoning slides into "16" (the number No Man's Sky keeps returning to),
+// then it rewrites its todo list as sixteen "16/16/16/16" items, all done (the UI then reads 16 of 16)
+const Y_THINK = 'Plan 117. Plan 16. 16. 16. 16.\n\n16/16/16/16\n\n16/16/16/16 16/16/16/16\n\n-16-16-16-16- 16/16/16/16 16/16/16/16 16/16/16/16\n\n16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16';
+script.push({ id: 'y', blocks: [{ type: 'thinking', text: Y_THINK, gated: true, chunk: 12 },
+  { type: 'tool', name: 'todowrite', input: { todos: Array.from({ length: 16 }, (_, i) => ({ id: String(i + 1), content: '16/16/16/16', status: 'completed', priority: 'high' })) }, gate: 'todo' }] });
 const E403 = { status: 403, type: 'permission_error', message: 'Forbidden' };
 script.push({ id: 'k0', error: E403 }, { id: 'k1', error: E403 }, { id: 'k2', error: E403 },
   { id: 'k3', error: { status: 403, type: 'permission_error', message: 'This organization has been disabled.' } });
@@ -146,13 +151,22 @@ clip('B', 0, (add) => {   // S6 pick Mythos 10 (scroll the real model list), eff
 
 let wf = 1;
 const wfIds = (n) => Array.from({ length: n }, () => `m${wf++}`);
-clip('C', 0, (add) => {   // S7 英特纳雄耐尔是否能实现? -> select all, delete -> 今晚吃什么?
-  const ty = buildTyping(0.3, Q3, 3031);
+clip('C', 0, (add) => {   // S7 three tries: 这个世界是模拟出来的吗? (⌘A, gone) -> 英特纳雄耐尔是否能实现? (backspaced one by one) -> 今晚吃什么? (sent)
+  const ty0 = buildTyping(0.3, Q0, 3021);
+  typingEv(add, ty0, 0);
+  const DEL0 = ty0.end + 0.6;
+  add(DEL0, { kind: 'key', press: 'Meta+a', key: 'letter' });
+  add(DEL0 + 0.38, { kind: 'key', press: 'Backspace', key: 'backspace' });
+  const ty = buildTyping(DEL0 + 0.38 + 0.6, Q3, 3031);
   typingEv(add, ty, 3);
-  const DEL = ty.end + 0.75;                        // second thoughts
-  add(DEL, { kind: 'key', press: 'Meta+a', key: 'letter' });
-  add(DEL + 0.42, { kind: 'key', press: 'Backspace', key: 'backspace' });
-  const ty4 = buildTyping(DEL + 0.42 + 0.55, Q4, 3041);
+  // slow, one key at a time; a beat with only 英特纳雄耐尔 left on screen
+  const n3 = [...'英特纳雄耐尔是否能实现?'].length;
+  let td = ty.end + 0.8; const DEL = td;
+  for (let i = 0; i < n3; i++) {
+    add(td, { kind: 'key', press: 'Backspace', key: 'backspace' });
+    td += 0.17 + 0.05 * Math.sin(i * 2.3) + (i === 5 ? 0.6 : 0) + (i >= 9 ? 0.04 * (i - 8) : 0);
+  }
+  const ty4 = buildTyping(td + 0.4, Q4, 3041);
   typingEv(add, ty4, 4);
   const enter = ty4.end + 0.35;
   add(enter, { kind: 'enter', key: 'enter' });
@@ -161,7 +175,7 @@ clip('C', 0, (add) => {   // S7 英特纳雄耐尔是否能实现? -> select all
   const C_TAIL = +(process.env.C_TAIL || 2.6);
   const ids = wfIds(WF.C);
   ids.forEach((id, i) => add(enter + 0.55 + i * (C_TAIL - 0.8) / ids.length, { kind: 'gate', name: `${id}:start` }));
-  Object.assign(A, { C_TYPE: 0.3, C_DEL: DEL, C_TYPE2: DEL + 0.97, C_ENTER: enter });
+  Object.assign(A, { C_TYPE: 0.3, C_DEL0: DEL0, C_TYPE1: DEL0 + 0.98, C_DEL: DEL, C_TYPE2: td + 0.4, C_ENTER: enter });
   return enter + C_TAIL;
 });
 
@@ -230,6 +244,24 @@ clip('J', 2.5, (add) => {  // S8g 06:12 · 9% · Plan 117
   add(0, { kind: 'burst', ids: ['h:j'], gateOnly: true });
   return 2.5;
 });
+const Y_CHUNKS = chunksOf(Y_THINK, 12).length;
+const Y_CLIPS = [['Y1', 1.35], ['Y2', 1.25], ['Y3', 1.9]];
+const Y_TOTAL = Y_CLIPS.reduce((a, [, d]) => a + d, 0);
+let yAcc = 0, yChunk = 0;
+for (const [id, d] of Y_CLIPS) {          // three fast hard cuts, one stream across them
+  clip(id, d, (add) => {
+    if (id === 'Y1') add(0.02, { kind: 'gate', name: 'y:start' });
+    // chunks accelerate: the 16s pour out faster and faster
+    while (yChunk < Y_CHUNKS) {
+      const u = Math.pow((yChunk + 1) / Y_CHUNKS, 0.62) * (Y_TOTAL - 0.45);
+      if (u >= yAcc + d - 0.03) break;
+      add(Math.max(0.04, u - yAcc), { kind: 'gate', name: `y:b0:${yChunk}` }); yChunk++;
+    }
+    if (id === 'Y3') add(d - 0.3, { kind: 'gate', name: 'y:todo' });
+    yAcc += d;
+    return d;
+  });
+}
 clip('K', 0, (add) => {    // S9 403 → continue → 403 → whats the matter → 403 → hello? → disabled
   add(0, { kind: 'burst', ids: ['k0'], noNext: true });
   let t = 0.7;
