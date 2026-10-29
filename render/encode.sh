@@ -12,7 +12,7 @@ if [ "${PHONE_GEN:-1}" = "1" ]; then
   # generation 1 = what the phone would have written: HEVC ~10 Mbit/s, 1 s GOP, every clip
   # (a separate recording) starts on a keyframe. Moire/fine detail is what the codec loses first.
   # The deliverable below is then a transcode of it (like any uploaded phone video).
-  CUTS=$(cd "$EP1" && python3 -c "import sys; sys.path.insert(0,'render'); import camera; print(','.join(f'{c.t0:.4f}' for c in camera.RIG.clips))")
+  CUTS=$(cd "$EP1" && "${PY:-$EP1/venv/bin/python3}" -c "import sys; sys.path.insert(0,'render'); import camera; print(','.join(f'{c.t0:.4f}' for c in camera.RIG.clips))")
   GEN1="$EP1/build/phone_gen1.mov"
   $FF -hide_banner -y "${SRC[@]}" \
     -vf "scale=out_color_matrix=bt709:out_range=tv:flags=lanczos+accurate_rnd,format=yuv420p" \
