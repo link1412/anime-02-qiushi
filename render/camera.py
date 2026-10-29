@@ -249,6 +249,6 @@ def focus_track():
 
 if __name__ == '__main__':
     print('clips', [(c.id, c.nf, round(c.t0, 3)) for c in RIG.clips], 'total frames', RIG.nframes, 'dur', RIG.nframes / FPS)
-    for t in [0, 3, 22, 30, 40, 43, 47, 55, 75, 80, 84, 85.3]:
+    for t in [x for x in [0, 3, 12, 20, 30, 33, 40, 50, 60, 68, 69.4] if x < T_CUT]:
         p = pose(t)
         print(t, np.round(p['C'], 1), p['fx'], p['macro'], round(p['dist'], 1), round(focus_track()[int(t * FPS)], 1))

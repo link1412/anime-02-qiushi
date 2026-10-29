@@ -107,10 +107,11 @@ clip('B', 0, (add) => {   // S6 pick Mythos 10, effort Ululululultra
   add(m + 1.35, { kind: 'click', text: 'Mythos 10', key: 'click' });
   const v = m + 2.05;
   add(v, { kind: 'click', role: 'button', name: '选择模型变体', key: 'click' });
-  add(v + 0.45, { kind: 'hover', text: 'High', exact: true });
-  add(v + 0.75, { kind: 'hover', text: 'Max', exact: true });
-  add(v + 1.05, { kind: 'hover', text: 'Ululululultra', exact: true });
-  add(v + 1.45, { kind: 'click', text: 'Ululululultra', exact: true, key: 'click' });
+  // variant items are lower-case in the DOM (capitalised by CSS)
+  add(v + 0.45, { kind: 'hover', role: 'menuitemradio', name: 'high', exact: true });
+  add(v + 0.75, { kind: 'hover', role: 'menuitemradio', name: 'max', exact: true });
+  add(v + 1.05, { kind: 'hover', role: 'menuitemradio', name: 'ululululultra', exact: true });
+  add(v + 1.45, { kind: 'click', role: 'menuitemradio', name: 'ululululultra', exact: true, key: 'click' });
   add(v + 1.6, { kind: 'mouseaway' });
   Object.assign(A, { B_MODEL: m, B_MODEL_PICK: m + 1.35, B_VARIANT: v, B_VARIANT_PICK: v + 1.45 });
   return v + 2.6;
@@ -319,7 +320,7 @@ const SEL_LAST = async (n) => page.evaluate((n) => {
 }, n);
 const FOCUS = async () => page.evaluate(() => { const ed = document.querySelector('[contenteditable="true"]'); if (ed && document.activeElement !== ed) { ed.focus(); const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } });
 const REPLACE_LAST = async (n, str) => { await FOCUS(); if (n > 0) await SEL_LAST(n); if (str.length) await page.keyboard.insertText(str); else if (n > 0) await page.keyboard.press('Backspace'); };
-const target = (e) => e.role ? page.getByRole(e.role, { name: e.name }).first() : page.getByText(e.text, { exact: !!e.exact }).last();
+const target = (e) => e.role ? page.getByRole(e.role, { name: e.name, exact: !!e.exact }).first() : page.getByText(e.text, { exact: !!e.exact }).last();
 
 async function burst(e) {
   for (const id of e.ids) {
@@ -364,6 +365,7 @@ for (let f = 0; f < Math.min(NF, MAXF); f++) {
       // move the (hidden) pointer by coordinates: actionability checks wait for rAF, which the paused clock freezes
       const el = target(e);
       const ok = await el.waitFor({ state: 'attached', timeout: 5000 }).then(() => true).catch(() => false);
+      if (ok && e.text) await el.evaluate(n => n.scrollIntoView({ block: 'center' })).catch(() => {});
       const bb = ok ? await el.boundingBox() : null;
       if (!bb) console.log(e.kind, 'fail', e.text || e.name);
       else {
