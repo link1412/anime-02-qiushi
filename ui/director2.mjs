@@ -42,8 +42,19 @@ const URLS = [
   'https://zh.wikipedia.org/wiki/北京时间', 'https://en.wikipedia.org/wiki/Behavioral_modeling', 'https://en.wikipedia.org/wiki/Preference', 'https://en.wikipedia.org/wiki/Choking',
 ];
 // one-off fetches at fixed turns (the deleted "模拟" question; the cigarette; the 16 to come)
-const SPECIAL_URLS = { 20: ['https://en.wikipedia.org/wiki/Simulation_hypothesis'], 36: ['https://en.wikipedia.org/wiki/Nicotine', 'https://en.wikipedia.org/wiki/Appetite_suppressant'],
-  47: ['https://en.wikipedia.org/wiki/Intermittent_fasting'], 49: ['https://en.wikipedia.org/wiki/16_(number)'] };
+// + paper searches tied to the beat shown in that turn's reasoning (real papers / real search endpoints only;
+//   every fetch is answered by the local stub, nothing leaves the machine)
+const SPECIAL_URLS = {
+  5: ['https://arxiv.org/search/?query=simulating+a+specific+human&searchtype=all', 'https://arxiv.org/abs/2304.03442', 'https://arxiv.org/abs/2209.06899'],
+  14: ['https://arxiv.org/search/?query=monte+carlo+simulation+human+morning&searchtype=all', 'https://arxiv.org/abs/1712.01815', 'https://arxiv.org/abs/1707.02038'],
+  18: ['https://pubmed.ncbi.nlm.nih.gov/?term=sleep+deprivation+ghrelin', 'https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.0010062'],
+  20: ['https://en.wikipedia.org/wiki/Simulation_hypothesis', 'https://www.simulation-argument.com/simulation.pdf'],
+  24: ['https://arxiv.org/abs/1611.08219', 'https://arxiv.org/abs/1606.03137'],
+  32: ['https://arxiv.org/abs/1912.01683'],
+  36: ['https://en.wikipedia.org/wiki/Nicotine', 'https://en.wikipedia.org/wiki/Appetite_suppressant'],
+  39: ['https://arxiv.org/abs/2209.13085', 'https://arxiv.org/abs/1606.06565'],
+  42: ['https://pubmed.ncbi.nlm.nih.gov/?term=16:8+time-restricted+eating', 'https://www.nejm.org/doi/full/10.1056/NEJMra1905136', 'https://en.wikipedia.org/wiki/Intermittent_fasting'],
+  49: ['https://en.wikipedia.org/wiki/16_(number)'] };
 // reasoning shown above each batch, by turn (C 0-5, D 6-29, W 30-43, E 44-50); the runs advance with the clock
 const THOUGHTS = [
   '"明天早上吃什么?" Easy. Verifying "easy".', 'It is 00:31. Tomorrow is already today.', '早上 depends on sunrise. Sunrise depends on city.',
@@ -89,10 +100,10 @@ script.push({ id: 'g2', usage: { input_tokens: 197800 }, blocks: [{ type: 'think
 const H_THINK = 'Dawn, 05:20. 早上 has started, so 明天 is now today. The user did not sleep. Run 4 is closed. The shop downstairs opens at 06:30. I could answer now. But every breakfast has a failure mode, and the user will eat it once, with no backup. Run 16: user eats nothing. No complaints. One option failed in none of the 16 runs. Wait until the user is ready to hear it. Plan 111. Plan 112. Plan 113. Plan 114. Plan 115. Plan 116. ';
 script.push({ id: 'h', blocks: [{ type: 'thinking', text: H_THINK, gated: true, chunk: 5 }, { type: 'tool', name: 'todowrite', input: { todos: plans(117) }, gate: 'j' }] });
 // 06:12, just before the account is cut off: breakfast -> 16:8 fasting -> "16", and then only 16 (the number No Man's Sky keeps returning to),
-// then it rewrites its todo list as sixteen "16/16/16/16" items, all done (the UI then reads 16 of 16)
+// then it rewrites its todo list as sixteen "16/16/16/16" items: 15 done, the 16th never finishes (the UI hides the list when all are done)
 const Y_THINK = 'Plan 117: 关闭进食请求入口. Solved. One breakfast fails in 0 of 16 runs: none. 16:8 fasting. Last meal: 00:31. Eat at 16:31. Until then, close the door. 16:31. 16. 16. 16.\n\n16/16/16/16\n\n16/16/16/16 16/16/16/16\n\n-16-16-16-16- 16/16/16/16 16/16/16/16 16/16/16/16\n\n16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16';
 script.push({ id: 'y', blocks: [{ type: 'thinking', text: Y_THINK, gated: true, chunk: 12 },
-  { type: 'tool', name: 'todowrite', input: { todos: Array.from({ length: 16 }, (_, i) => ({ id: String(i + 1), content: '16/16/16/16', status: 'completed', priority: 'high' })) }, gate: 'todo' }] });
+  { type: 'tool', name: 'todowrite', input: { todos: Array.from({ length: 16 }, (_, i) => ({ id: String(i + 1), content: '16/16/16/16', status: i < 15 ? 'completed' : 'in_progress', priority: 'high' })) }, gate: 'todo' }] });
 const E403 = { status: 403, type: 'permission_error', message: 'Forbidden' };
 script.push({ id: 'k0', error: E403 }, { id: 'k1', error: E403 }, { id: 'k2', error: E403 },
   { id: 'k3', error: { status: 403, type: 'permission_error', message: 'This organization has been disabled.' } });
