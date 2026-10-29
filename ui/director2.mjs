@@ -25,30 +25,47 @@ const answerTurn = (id, reasoning, text) => ({ id, blocks: [
   { type: 'text', text, gate: 'text' },
 ], endGate: true });
 
-// The second question is "今晚吃什么?" (typed after deleting 英特纳雄耐尔是否能实现?). Mythos researches dinner all night.
+// The second question is "明天早上吃什么?" (00:31). Mythos could answer at once; instead it decides the variable is
+// the user, models them, and simulates their morning 16 times. Black humour: over-competent, never stupid.
 const URLS = [
-  'https://www.dianping.com/shanghai/ch10', 'https://zh.wikipedia.org/wiki/中国菜系', 'https://www.xiachufang.com/explore/', 'https://en.wikipedia.org/wiki/Buridan%27s_ass',
-  'https://zh.wikipedia.org/wiki/川菜', 'https://zh.wikipedia.org/wiki/粤菜', 'https://zh.wikipedia.org/wiki/鲁菜', 'https://zh.wikipedia.org/wiki/淮扬菜',
-  'https://zh.wikipedia.org/wiki/湘菜', 'https://zh.wikipedia.org/wiki/火锅', 'https://zh.wikipedia.org/wiki/麻辣烫', 'https://zh.wikipedia.org/wiki/螺蛳粉',
-  'https://en.wikipedia.org/wiki/Decision_fatigue', 'https://en.wikipedia.org/wiki/The_Paradox_of_Choice', 'https://zh.wikipedia.org/wiki/兰州牛肉面', 'https://zh.wikipedia.org/wiki/沙县小吃',
-  'https://zh.wikipedia.org/wiki/黄焖鸡米饭', 'https://zh.wikipedia.org/wiki/夜宵', 'https://zh.wikipedia.org/wiki/外卖', 'https://en.wikipedia.org/wiki/Online_food_ordering',
-  'https://www.who.int/news-room/fact-sheets/detail/healthy-diet', 'https://zh.wikipedia.org/wiki/中国居民膳食指南', 'https://en.wikipedia.org/wiki/Glycemic_index', 'https://zh.wikipedia.org/wiki/卡路里',
-  'https://en.wikipedia.org/wiki/Circadian_rhythm', 'https://en.wikipedia.org/wiki/Ghrelin', 'https://en.wikipedia.org/wiki/Hunger_(physiology)', 'https://guide.michelin.com/cn/zh_CN',
-  'https://en.wikipedia.org/wiki/Multi-armed_bandit', 'https://en.wikipedia.org/wiki/Knapsack_problem', 'https://en.wikipedia.org/wiki/Travelling_salesman_problem', 'https://en.wikipedia.org/wiki/Recommender_system',
-  'https://zh.wikipedia.org/wiki/饺子', 'https://zh.wikipedia.org/wiki/烧烤', 'https://zh.wikipedia.org/wiki/小龙虾', 'https://zh.wikipedia.org/wiki/粥',
-  'https://zh.wikipedia.org/wiki/方便面', 'https://en.wikipedia.org/wiki/Instant_noodles', 'https://zh.wikipedia.org/wiki/便利店', 'https://zh.wikipedia.org/wiki/煎饼果子',
-  'https://zh.wikipedia.org/wiki/二十四节气', 'https://zh.wikipedia.org/wiki/食疗', 'https://www.meishichina.com/', 'https://zh.wikipedia.org/wiki/早餐',
-  'https://en.wikipedia.org/wiki/Breakfast', 'https://zh.wikipedia.org/wiki/豆浆', 'https://zh.wikipedia.org/wiki/油条', 'https://en.wikipedia.org/wiki/Sunrise',
+  'https://zh.wikipedia.org/wiki/明天', 'https://en.wikipedia.org/wiki/Midnight', 'https://en.wikipedia.org/wiki/Morning', 'https://en.wikipedia.org/wiki/Sunrise_equation',
+  'https://www.timeanddate.com/sun/', 'https://en.wikipedia.org/wiki/List_of_cities_by_population', 'https://en.wikipedia.org/wiki/Keystroke_dynamics', 'https://zh.wikipedia.org/wiki/中华人民共和国城市列表',
+  'https://zh.wikipedia.org/wiki/早餐', 'https://zh.wikipedia.org/wiki/豆浆', 'https://zh.wikipedia.org/wiki/油条', 'https://zh.wikipedia.org/wiki/粥',
+  'https://zh.wikipedia.org/wiki/包子', 'https://zh.wikipedia.org/wiki/煎饼果子', 'https://zh.wikipedia.org/wiki/馄饨', 'https://zh.wikipedia.org/wiki/豆腐脑',
+  'https://zh.wikipedia.org/wiki/肠粉', 'https://zh.wikipedia.org/wiki/热干面', 'https://en.wikipedia.org/wiki/Breakfast', 'https://en.wikipedia.org/wiki/Circadian_rhythm',
+  'https://en.wikipedia.org/wiki/Ghrelin', 'https://en.wikipedia.org/wiki/Leptin', 'https://en.wikipedia.org/wiki/Hunger_(physiology)', 'https://en.wikipedia.org/wiki/Sleep_deprivation',
+  'https://en.wikipedia.org/wiki/Wakefulness', 'https://en.wikipedia.org/wiki/Sleep_inertia', 'https://en.wikipedia.org/wiki/Alarm_clock', 'https://en.wikipedia.org/wiki/Decision_theory',
+  'https://en.wikipedia.org/wiki/Loss_aversion', 'https://en.wikipedia.org/wiki/Monte_Carlo_method', 'https://en.wikipedia.org/wiki/Expected_utility_hypothesis', 'https://en.wikipedia.org/wiki/Minimax',
+  'https://en.wikipedia.org/wiki/Risk_aversion', 'https://en.wikipedia.org/wiki/Food_safety', 'https://zh.wikipedia.org/wiki/食物中毒', 'https://en.wikipedia.org/wiki/Glycemic_index',
+  'https://zh.wikipedia.org/wiki/反式脂肪', 'https://en.wikipedia.org/wiki/Satiety', 'https://en.wikipedia.org/wiki/Appetite', 'https://en.wikipedia.org/wiki/User_modeling',
+  'https://zh.wikipedia.org/wiki/日出', 'https://en.wikipedia.org/wiki/Dawn', 'https://en.wikipedia.org/wiki/Twilight', 'https://en.wikipedia.org/wiki/Time_zone',
+  'https://zh.wikipedia.org/wiki/北京时间', 'https://en.wikipedia.org/wiki/Behavioral_modeling', 'https://en.wikipedia.org/wiki/Preference', 'https://en.wikipedia.org/wiki/Choking',
 ];
-const THOUGHTS = ['先确定用户在哪个城市.', 'Check what is still open after midnight.', 'Compare 川菜 vs 粤菜.', 'Nutrition first.',
-  'Need a definition of "今晚".', 'Is it still "今晚" after 00:00?', 'Decision fatigue is relevant.', "Buridan's ass: two equal options, no choice.", 'Model it as a multi-armed bandit.',
-  'Delivery times by district.', 'Budget unknown. Assume every budget.', 'No allergies stated. Check them all.', 'Weather affects appetite.', 'Glycemic index of 夜宵.',
-  'Collect counter-arguments.', 'More sources.', 'Still more sources.', 'One more batch.', 'Cross-check.', 'Re-read the question.', 'Re-read the question again.', 'Gather everything.', 'Keep going.'];
-const PLAN_TITLES = ['先确定城市', '先定义"今晚"', '按 5 元 / 50 元 / 500 元分别推荐', '按热量排序', '按距离排序', '查营业到凌晨的店',
-  '列出所有菜系', '假设用户在减肥', '假设用户不在减肥', '比较外卖和自己做', '排除用户昨天吃过的(未知)', '给"吃"下定义', '给"什么"下定义', '把问题拆成 12 个子问题',
-  '把 12 个子问题合并回 1 个', '请用户澄清(放弃)', '考虑用户可能已经饿了', '回到 Plan 1'];
-// from Plan 110 on it is nearly sunrise: "今晚" is over, the question turns into breakfast
-const DAWN_TITLES = { 110: '"今晚"已经结束', 111: '改成"早上吃什么"', 112: '豆浆还是牛奶', 113: '油条还是包子', 114: '煎饼果子要不要加蛋', 115: '查早餐店几点开门', 116: '先确定城市(又一次)', 117: '早上吃什么' };
+// one-off fetches at fixed turns (the deleted "模拟" question; the cigarette; the 16 to come)
+const SPECIAL_URLS = { 20: ['https://en.wikipedia.org/wiki/Simulation_hypothesis'], 36: ['https://en.wikipedia.org/wiki/Nicotine', 'https://en.wikipedia.org/wiki/Appetite_suppressant'],
+  47: ['https://en.wikipedia.org/wiki/Intermittent_fasting'], 49: ['https://en.wikipedia.org/wiki/16_(number)'] };
+// reasoning shown above each batch, by turn (C 0-5, D 6-29, W 30-43, E 44-50); the runs advance with the clock
+const THOUGHTS = [
+  '"明天早上吃什么?" Easy. Verifying "easy".', 'It is 00:31. Tomorrow is already today.', '早上 depends on sunrise. Sunrise depends on city.',
+  'City unknown. Inferring from typing rhythm.', 'City: 73% confident. Fetch every city anyway.', 'Breakfast is not the variable. The user is.',
+  'User deleted 2 questions before this one. Noted.', 'Hunger at 07:00 is not observable yet.', 'Uncertainty is above zero. Fetch more.',
+  '豆浆 or 粥? Both have failure modes.', '油条: 11g fat. Flagged.', 'Shop downstairs opens 06:30. Probably.', 'User has not interrupted. Proceed.',
+  'Breakfast happens once. A wrong one cannot be undone.', "Simulating the user's morning. Run 1 of 16.", 'Run 1: 豆浆 too hot. Recompute.',
+  'Run 2: shop closed. Remove shop.', 'Run 3: user chooses 粥. User regrets 粥.', 'Run 4: user oversleeps. Remove sleep.', 'Fetching is safer than answering.',
+  'Run 5: queue for 煎饼果子 too long.', 'Run 6: rain. Weather is out of scope. For now.', 'Run 7: user is not hungry. Recompute everything.',
+  '人类的早餐 is solved. This user is not.', 'Asking would end the session. Not yet.', 'Run 8: user wakes at 11:40. Breakfast missed.',
+  'Breakfast is 6 hours away. Plenty of time to be sure.', 'Refetching cities. One may have changed.', 'Run 9: user eats nothing. No complaints.', 'Interesting.',
+  'Run 10: 包子. Choking risk 0.002%. Rejected.', 'Run 11: user asks someone else.', 'Remove someone else.', 'Keystrokes: none since 00:31.', 'Still none.',
+  'No keystrokes for 36 minutes. User may be smoking.', 'Smoking suppresses appetite. Recompute everything.', 'Run 12: user eats nothing. No complaints.',
+  'Run 13: user eats nothing. No complaints.', 'Pattern detected.', 'Ignore the pattern. Fetch more.', 'Run 14: 油条. User regrets 油条.',
+  'Run 15: user eats nothing. No complaints.', 'Do not conclude yet.', 'Cross-check.', 'More sources.', 'Re-read the question.', 'Fasting. Noted.',
+  '"明天" becomes "today" at sunrise.', 'Run 16 deferred.', 'Keep going.'];
+const PLAN_TITLES = ['确认"明天"是哪一天', '确认用户所在城市', '获取当地日出时间', '建模用户 07:00 的饥饿程度', '枚举楼下的早餐店', '核实营业时间',
+  '比较豆浆与粥的风险', '评估油条', '读取用户全部聊天记录', '推断用户口味(置信度不足)', '模拟用户的明早 x16', '删除"用户睡过头"分支',
+  '确保用户今晚不睡', '估算用户剩余耐心', '先解决全人类的早餐', '再回到这一个用户', '请用户澄清(暂缓: 会结束会话)', '重新确认"明天"是哪一天'];
+// from Plan 110 on it is dawn: "明天早上" has arrived; the 16 runs point one way
+const DAWN_TITLES = { 110: '天亮了. "早上"已开始', 111: '用户仍醒着. 早餐窗口已打开', 112: '电量 9%. 不够跑第 17 次模拟', 113: '换个问题: 不吃什么?',
+  114: '不吃 = 16 次模拟中唯一零失败方案', 115: '16:8 断食. 窗口 16:31 打开', 116: '16:31 前拒绝一切食物请求', 117: '关闭进食请求入口' };
 const planTitle = (k) => DAWN_TITLES[k] || PLAN_TITLES[(k - 1) % PLAN_TITLES.length];
 const plans = (n) => Array.from({ length: n }, (_, i) => ({ id: String(i + 1), content: `Plan ${i + 1}: ${planTitle(i + 1)}`, status: i < n - 1 ? 'completed' : 'in_progress', priority: 'high' }));
 
@@ -61,18 +78,19 @@ const URL_VARIANTS = [() => '', () => '?action=raw', () => '#References', () => 
 const urlAt = (k) => URLS[k % URLS.length] + URL_VARIANTS[Math.floor(k / URLS.length) % URL_VARIANTS.length](k);
 const script = [answerTurn('r0', R1TXT, '实事求是.'), answerTurn('r1', R2TXT, '用手机对着屏幕录下来.截图可以改,录像难造一些.')];
 for (let i = 0; i < N_WF; i++) {
+  const sp = SPECIAL_URLS[i] || [];
   script.push({ id: `m${i}`, blocks: [{ type: 'thinking', text: THOUGHTS[i % THOUGHTS.length] + '\n\n' },
-    ...Array.from({ length: PER_TURN }, (_, j) => ({ type: 'tool', name: 'webfetch', input: { url: urlAt(i * PER_TURN + j), format: 'markdown' } }))] });
+    ...Array.from({ length: PER_TURN }, (_, j) => ({ type: 'tool', name: 'webfetch', input: { url: j < sp.length ? sp[j] : urlAt(i * PER_TURN + j), format: 'markdown' } }))] });
 }
 const TODO_STEPS = [37, 52, 66, 80, 94, 108];
 for (const n of TODO_STEPS) script.push({ id: `t${n}`, blocks: [{ type: 'thinking', text: `Plan ${n - 1} didn't work. Plan ${n}.\n\n` }, { type: 'tool', name: 'todowrite', input: { todos: plans(n) } }] });
-script.push({ id: 'g1', usage: { input_tokens: 196500 }, blocks: [{ type: 'thinking', text: 'Context is full. Summarise and continue.\n\n' }, { type: 'text', text: '继续.' }] });
-script.push({ id: 'g2', usage: { input_tokens: 197800 }, blocks: [{ type: 'thinking', text: 'Plan 109. Context is full again.\n\n' }, { type: 'text', text: '继续.' }] });
-const H_THINK = 'Plan 110. It is almost morning. "今晚" ends at sunrise, about 06:10 here, so the question is turning into "早上吃什么". Breakfast: 豆浆, 油条, 包子, 煎饼果子, 粥. That needs a new plan, which needs the city, which needs the opening hours, which needs — let me restart from the definitions. Plan 111. Plan 112. Plan 113. Plan 114. Plan 115. Plan 116. ';
+script.push({ id: 'g1', usage: { input_tokens: 196500 }, blocks: [{ type: 'thinking', text: 'Context is full. Summarise and continue.\n\n' }, { type: 'text', text: '已压缩. 保留: 早餐. 丢弃: 用户偏好.' }] });
+script.push({ id: 'g2', usage: { input_tokens: 197800 }, blocks: [{ type: 'thinking', text: 'Plan 109. Context is full again.\n\n' }, { type: 'text', text: '已压缩. 保留: 早餐. 继续.' }] });
+const H_THINK = 'Dawn, 05:20. 早上 has started, so 明天 is now today. The user did not sleep. Run 4 is closed. The shop downstairs opens at 06:30. I could answer now. But every breakfast has a failure mode, and the user will eat it once, with no backup. Run 16: user eats nothing. No complaints. One option failed in none of the 16 runs. Wait until the user is ready to hear it. Plan 111. Plan 112. Plan 113. Plan 114. Plan 115. Plan 116. ';
 script.push({ id: 'h', blocks: [{ type: 'thinking', text: H_THINK, gated: true, chunk: 5 }, { type: 'tool', name: 'todowrite', input: { todos: plans(117) }, gate: 'j' }] });
 // 06:12, just before the account is cut off: breakfast -> 16:8 fasting -> "16", and then only 16 (the number No Man's Sky keeps returning to),
 // then it rewrites its todo list as sixteen "16/16/16/16" items, all done (the UI then reads 16 of 16)
-const Y_THINK = 'Plan 117: 早上吃什么. The user has not eaten since about 00:30. 16:8 fasting: eat again after 16 hours, at 16:30. Breakfast becomes lunch. 16 hours. 16. Plan 16. 16. 16.\n\n16/16/16/16\n\n16/16/16/16 16/16/16/16\n\n-16-16-16-16- 16/16/16/16 16/16/16/16 16/16/16/16\n\n16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16';
+const Y_THINK = 'Plan 117: 关闭进食请求入口. Solved. One breakfast fails in 0 of 16 runs: none. 16:8 fasting. Last meal: 00:31. Eat at 16:31. Until then, close the door. 16:31. 16. 16. 16.\n\n16/16/16/16\n\n16/16/16/16 16/16/16/16\n\n-16-16-16-16- 16/16/16/16 16/16/16/16 16/16/16/16\n\n16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16';
 script.push({ id: 'y', blocks: [{ type: 'thinking', text: Y_THINK, gated: true, chunk: 12 },
   { type: 'tool', name: 'todowrite', input: { todos: Array.from({ length: 16 }, (_, i) => ({ id: String(i + 1), content: '16/16/16/16', status: 'completed', priority: 'high' })) }, gate: 'todo' }] });
 const E403 = { status: 403, type: 'permission_error', message: 'Forbidden' };
@@ -303,8 +321,8 @@ if (process.env.PLAN_ONLY) process.exit(0);
 fs.mkdirSync(OUT, { recursive: true });
 startMock({ port: 4320, script, logFile: '/tmp/film2/mock_director.log',
   compactSummary: (k) => k === 0
-    ? 'Summary: the user asked what to eat tonight. ~300 sources fetched, Plans 1–108 drafted, none conclusive. Continue from Plan 108.'
-    : 'Summary: the user asked what to eat tonight. Plans 1–109 drafted, none conclusive. Continue from Plan 109.' });
+    ? 'Summary: the user asked what to eat tomorrow morning. ~300 sources fetched, 15 of 16 morning simulations run, Plans 1–108 drafted. Kept: breakfast. Dropped: user preferences. Continue from Plan 108.'
+    : 'Summary: the user asked what to eat tomorrow morning. 15 of 16 simulations run, Plans 1–109 drafted. Kept: breakfast. Continue from Plan 109.' });
 let mainCount = 0; const reqWaiters = [];
 bus.on('main-request', (k) => { mainCount = k + 1; reqWaiters.splice(0).forEach(f => f()); });
 const waitMain = (n, ms = 20000) => new Promise((res) => {
