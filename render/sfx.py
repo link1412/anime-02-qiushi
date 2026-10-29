@@ -1,6 +1,8 @@
 """Clip sound effects from CC0 recordings (assets/sfx, see assets/sfx/SOURCES.md).
 
     python3 render/sfx.py C        # -> build/sfx_C.wav (stem) + build/sfx_C_preview.wav (with room bed)
+    python3 render/sfx.py all      # -> build/sfx_film.wav: every clip with a "lighter", placed at
+                                   #    its film offset, full film length (add it to the mix as is)
 
 Clip "lighter" (storyboard) drives it, so picture and sound share the same times:
   strike  -> lighter take: flint-wheel strike lands on the frame the sparks appear, the flame
@@ -80,34 +82,61 @@ def phone_mic(mix):
     return mix
 
 
-def main(clip_id='C'):
+def clip_stem(clip_id):
+    """(stem, clip) for one clip, clip-local, or (None, clip) if it has no lighter."""
     clip = next(c for c in camera.RIG.clips if c.id == clip_id)
-    L = clip.raw.get('lighter')
-    if not L:
-        raise SystemExit(f'clip {clip_id} has no "lighter"')
+    if not clip.raw.get('lighter'):
+        return None, clip
+    return render_stem(clip), clip
+
+
+def film():
+    n = int(round(camera.RIG.nframes / camera.FPS * SR))
+    out = np.zeros((n, 2))
+    used = []
+    for c in camera.RIG.clips:
+        if not c.raw.get('lighter'):
+            continue
+        st = render_stem(c)
+        i = int(round(c.t0 * SR)); m = min(len(st), n - i)
+        out[i:i + m] += st[:m]          # hard cut at the clip end (stem is clip length)
+        used.append(f'{c.id}@{c.t0:.3f}s')
+    wf.write(f'{ROOT}/build/sfx_film.wav', SR, out.astype(np.float32))
+    print(f'build/sfx_film.wav  {n / SR:.3f}s  48k stereo float  clips: {", ".join(used) or "none"}')
+
+
+def render_stem(clip):
+    L = clip.raw['lighter']
     snd = L.get('sound', {})
     n = int(round(clip.dur * SR))
     bus = np.zeros((n, 2))
     tv = camera.tval
     x, on = take(snd.get('lighter', 'lighter_bigsoundbank_2131'))
-    # the flame hiss stops when the thumb lets go
     out = tv(L['out']) - tv(L['strike'])
     k = int((on + out) * SR)
     if k < len(x):
         f = int(0.05 * SR)
         x[k:k + f] *= np.linspace(1, 0, len(x[k:k + f]))
         x[k + f:] = 0
-    place(bus, x, tv(L['strike']), on, delay_r=11)          # lighter: in the right hand, ~35 cm
+    place(bus, x, tv(L['strike']), on, delay_r=11)
     if L.get('drag') and snd.get('drag', 'bonus_drag_bigsoundbank_2132'):
         x, on = take(snd.get('drag', 'bonus_drag_bigsoundbank_2132'))
-        place(bus, x, tv(L['drag'][0]), on, delay_r=14)    # mouth, ~45 cm
+        place(bus, x, tv(L['drag'][0]), on, delay_r=14)
     if L.get('exhale'):
         x, on = take(snd.get('exhale', 'exhale_bigsoundbank_1405'))
         place(bus, x, tv(L['exhale']), on, delay_r=14)
     rng = np.random.default_rng(int(clip.raw.get('seed', 0)) + 300)
     ir = room_ir(rng)
     wet = np.stack([signal.fftconvolve(bus[:, c], ir[:, c])[:n] for c in range(2)], 1)
-    stem = phone_mic(bus + 0.22 * wet)
+    return phone_mic(bus + 0.22 * wet)
+
+
+def main(clip_id='C'):
+    stem, clip = clip_stem(clip_id)
+    if stem is None:
+        raise SystemExit(f'clip {clip_id} has no "lighter"')
+    L = clip.raw['lighter']; tv = camera.tval; n = len(stem)
+    rng = np.random.default_rng(int(clip.raw.get('seed', 0)) + 301)
     pk = np.abs(stem).max()
     os.makedirs(f'{ROOT}/build', exist_ok=True)
     wf.write(f'{ROOT}/build/sfx_{clip_id}.wav', SR, stem.astype(np.float32))
@@ -122,4 +151,5 @@ def main(clip_id='C'):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1] if len(sys.argv) > 1 else 'C')
+    a = sys.argv[1] if len(sys.argv) > 1 else 'C'
+    film() if a == 'all' else main(a)
