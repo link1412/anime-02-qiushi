@@ -2,8 +2,10 @@
 
     python3 render/smudge.py            # -> build/smudge.png (+ build/smudge_preview.jpg)
 
+No keyboard imprints: the MacBook's keyboard deck is recessed and the lid gap keeps keys off
+the glass on this model, so that would be a false detail.
 Texture in panel millimetres (0.05 mm / texel, covers the whole 302.4 x 196.4 mm panel):
-  R = oil film (fingerprints, keyboard imprints, cloth-wipe arcs, faint overall film)
+  R = oil film (fingerprints, cloth-wipe strokes, faint overall film)
   G = particles (dust specks, lint fibres, dried spittle droplets)
 Deterministic (fixed seed). render.py and tool/renderer.js sample it on the outer glass plane,
 GLASS_GAP mm in front of the pixel plane, so it has its own parallax and defocus.
@@ -67,69 +69,6 @@ def add_patch(dst, x0, y0, patch, mode='max'):
         d[:] = 1 - (1 - d) * (1 - src)
 
 
-# ---------------------------------------------------------------- keyboard imprints
-# MacBook Pro 14" (2021+) keyboard: 6 rows, 14.5u wide, full-height function row.
-U = 18.9           # key pitch, mm
-CAP = 16.4         # keycap face, mm
-ROWS = [
-    [('esc', 1.5)] + [(f'f{i}', 1) for i in range(1, 13)] + [('touchid', 1)],
-    [('`', 1)] + [(c, 1) for c in '1234567890-='] + [('delete', 1.5)],
-    [('tab', 1.5)] + [(c, 1) for c in 'qwertyuiop[]'] + [('\\', 1)],
-    [('caps', 1.75)] + [(c, 1) for c in "asdfghjkl;'"] + [('return', 1.75)],
-    [('lshift', 2.25)] + [(c, 1) for c in 'zxcvbnm,./'] + [('rshift', 2.25)],
-    [('fn', 1), ('ctrl', 1), ('opt', 1), ('cmd', 1.25), ('space', 5), ('rcmd', 1.25), ('ropt', 1),
-     ('left', 1), ('updown', 1), ('right', 1)],
-]
-# how oily each keycap is: pinyin typing frequency (letters) + heavy-use keys
-PINYIN = dict(zip('aeinghuozsdjxyclbmtqwfkrpv', np.linspace(1.0, 0.18, 26)))
-HEAVY = {'space': 1.0, 'return': 0.9, 'delete': 0.85, 'cmd': 0.6, 'lshift': 0.55, 'rshift': 0.3,
-         'tab': 0.3, 'esc': 0.35, ',': 0.4, '.': 0.45, '/': 0.25, 'touchid': 0.5}
-
-
-def keyboard(oil, rng):
-    width = 14.5 * U
-    x_left = PW_MM / 2 - width / 2
-    y_fn = PH_MM - 21.0                     # function row (next to the hinge) -> bottom of screen
-    for r, row in enumerate(ROWS):
-        yc = y_fn - r * U
-        x = x_left
-        for name, wu in row:
-            w_mm = wu * U - (U - CAP); h_mm = CAP
-            xc = x + wu * U / 2
-            x += wu * U
-            s = PINYIN.get(name, HEAVY.get(name, 0.15))
-            if name.startswith('f') and name[1:].isdigit():
-                s = 0.12
-            s *= rng.uniform(0.6, 1.25)
-            if s < 0.14 or rng.random() < 0.12:
-                continue
-            if name == 'updown':
-                for dy in (-U / 4, U / 4):
-                    _keycap(oil, xc, yc + dy, w_mm, CAP / 2 - 1.2, s * 0.5, rng)
-                continue
-            _keycap(oil, xc, yc, w_mm, h_mm, s, rng)
-
-
-def _keycap(oil, xc, yc, w_mm, h_mm, s, rng):
-    pad = 1.5
-    hw, hh = w_mm / 2 + pad, h_mm / 2 + pad
-    x0, y0 = int(mm2t(xc - hw)), int(mm2t(yc - hh))
-    nw, nh = int(mm2t(2 * hw)), int(mm2t(2 * hh))
-    yy, xx = np.mgrid[0:nh, 0:nw].astype(np.float32)
-    u = (xx + x0 + 0.5) * TEX - xc; v = (yy + y0 + 0.5) * TEX - yc
-    r = 2.2   # corner radius
-    qx = np.abs(u) - (w_mm / 2 - r); qy = np.abs(v) - (h_mm / 2 - r)
-    sd = np.sqrt(np.maximum(qx, 0) ** 2 + np.maximum(qy, 0) ** 2) + np.minimum(np.maximum(qx, qy), 0) - r
-    inside = smoothstep(0.25, -0.25, sd)
-    rim = np.exp(-((sd + 0.5) / 0.45) ** 2)               # cap edge pressed hardest
-    # fingertip dish: oil concentrated a bit below centre of the cap
-    tip = np.exp(-((u / (w_mm * 0.28)) ** 2 + ((v + 1.0) / (h_mm * 0.28)) ** 2))
-    patchy = smoothstep(0.3, 0.8, fbm(nh, nw, mm2t(0.9), 3, rng))
-    rimbreak = smoothstep(0.25, 0.6, fbm(nh, nw, mm2t(2.5), 2, rng))
-    val = (0.6 * rim * (0.3 + 0.7 * rimbreak) + 0.22 * tip * inside * (0.4 + 0.6 * patchy)) * s * 0.4
-    add_patch(oil, x0, y0, val.astype(np.float32), 'screen')
-
-
 # ---------------------------------------------------------------- fingerprints
 def fingerprint(oil, rng, cx, cy, ang, a=7.0, b=9.5, pressure=0.8, smear=None, lam=0.48):
     R = max(a, b) * 1.6 + (np.hypot(*smear) if smear else 0)
@@ -166,25 +105,58 @@ def fingerprint(oil, rng, cx, cy, ang, a=7.0, b=9.5, pressure=0.8, smear=None, l
     add_patch(oil, x0, y0, val.astype(np.float32), 'screen')
 
 
-# ---------------------------------------------------------------- cloth wipe arcs
-def wipe(oil, rng, cx, cy, R, a0, a1, width=24.0, amp=0.09):
-    pad = R + width
-    x0, y0 = max(0, int(mm2t(cx - pad))), max(0, int(mm2t(cy - pad)))
-    x1, y1 = min(TW, int(mm2t(cx + pad))), min(TH, int(mm2t(cy + pad)))
+# ---------------------------------------------------------------- cloth wipe strokes
+def wipe(oil, rng, x, y, heading, length, width=22.0, amp=0.08):
+    """one hand-wiped stroke with a cloth: wandering path (curvature noise), width and pressure
+    that vary along it, many parallel fibre streaks that break up, fading at both ends."""
+    S = 8                                            # cv2 sub-texel shift bits = 3
+    n = max(40, int(length / 0.6))
+    ks = rng.normal(0, 1, 4); kp = rng.uniform(0, 2 * np.pi, 4)
+    pts, hd = [], heading
+    for i in range(n):
+        u = i / (n - 1)
+        pts.append((x, y, hd, u))
+        curv = sum(ks[j] * math.sin(2 * np.pi * (j + 1) * 0.6 * u + kp[j]) for j in range(4)) * 0.03
+        hd += curv * length / n * 0.6 + rng.normal(0, 0.004)
+        hd = heading + float(np.clip(hd - heading, -0.9, 0.9))   # an arm sweep, never a loop
+        x += math.cos(hd) * length / n; y += math.sin(hd) * length / n
+    P = np.array(pts)
+    u = P[:, 3]
+    press = np.sin(np.pi * np.clip(u, 0, 1)) ** 0.7 * (0.6 + 0.4 * np.interp(u, np.linspace(0, 1, 7), rng.random(7)))
+    wid = width * (0.7 + 0.5 * np.interp(u, np.linspace(0, 1, 5), rng.random(5)))
+    can = np.zeros((TH, TW), np.float32)
+    nx, ny = -np.sin(P[:, 2]), np.cos(P[:, 2])
+    nst = int(width / 0.25)
+    for k in range(nst):
+        off = (k / (nst - 1) - 0.5)                  # across the cloth, -0.5..0.5
+        strength = rng.random() ** 3 * (1 - (2 * off) ** 4)
+        if strength < 0.02:
+            continue
+        # fibre contact comes and goes along the stroke
+        on = np.interp(u, np.linspace(0, 1, 12), (rng.random(12) > 0.35).astype(float)) > 0.5
+        xs = P[:, 0] + nx * off * wid + rng.normal(0, 0.05)
+        ys = P[:, 1] + ny * off * wid + rng.normal(0, 0.05)
+        seg = []
+        for i in range(n):
+            if on[i]:
+                seg.append((int(xs[i] / TEX * S), int(ys[i] / TEX * S)))
+            elif len(seg) > 1:
+                cv2.polylines(can, [np.array(seg, np.int32)], False, float(strength), 1, cv2.LINE_AA, 3); seg = []
+            else:
+                seg = []
+        if len(seg) > 1:
+            cv2.polylines(can, [np.array(seg, np.int32)], False, float(strength), 1, cv2.LINE_AA, 3)
+    # thin haze where the cloth spread the oil (wider, patchy), then scale by pressure
+    band = np.zeros((TH, TW), np.float32)
+    for i in range(0, n, 2):
+        cv2.circle(band, (int(P[i, 0] / TEX * S), int(P[i, 1] / TEX * S)), int(wid[i] * 0.45 / TEX * S), float(press[i]), -1, cv2.LINE_AA, 3)
+    x0 = int(max(0, P[:, 0].min() - width) / TEX); x1 = int(min(PW_MM, P[:, 0].max() + width) / TEX)
+    y0 = int(max(0, P[:, 1].min() - width) / TEX); y1 = int(min(PH_MM, P[:, 1].max() + width) / TEX)
     if x1 <= x0 or y1 <= y0:
         return
-    yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
-    X = (xx + 0.5) * TEX - cx; Y = (yy + 0.5) * TEX - cy
-    r = np.sqrt(X * X + Y * Y); th = np.arctan2(Y, X)
-    band = smoothstep(width / 2, width / 2 - 4, np.abs(r - R))
-    ang = smoothstep(a0, a0 + 0.25, th) * smoothstep(a1, a1 - 0.35, th)
-    # cloth fibres drag fine concentric streaks
-    grid = np.arange(0, R + width + 1, 0.08)
-    prof = rng.random(len(grid)) ** 6
-    prof = np.convolve(prof, np.ones(3) / 3, 'same')
-    streak = np.interp(r, grid, prof).astype(np.float32)
-    along = 0.5 + 0.5 * np.interp(th, np.linspace(-np.pi, np.pi, 64), rng.random(64)).astype(np.float32)
-    val = amp * band * ang * (0.25 + 1.6 * streak) * along
+    bb = cv2.GaussianBlur(band[y0:y1, x0:x1], (0, 0), mm2t(2.5))
+    patchy = fbm(y1 - y0, x1 - x0, mm2t(3), 4, rng)
+    val = amp * bb * (2.2 * can[y0:y1, x0:x1] + 0.25 * patchy)
     add_patch(oil, x0, y0, val.astype(np.float32), 'screen')
 
 
@@ -235,7 +207,6 @@ def build(seed=20261030):
     film = fbm(TH, TW, mm2t(35), 5, rng)
     yy = np.linspace(0, 1, TH, dtype=np.float32)[:, None]
     oil += 0.012 + 0.03 * film * (0.6 + 0.6 * yy)
-    keyboard(oil, rng)
     # lid handling: thumbs at the top edge, fingers on the side edges; pointing at text mid-screen
     for cx, cy, ang, a, b, p, sm in [
         (151, 6.0, 1.75, 7.5, 10, 0.95, None), (139, 9.5, 1.35, 7, 9.5, 0.55, None),
@@ -245,9 +216,11 @@ def build(seed=20261030):
         (243, 151, 0.9, 6.2, 8.2, 0.32, None), (62, 83, -0.1, 6, 8, 0.25, (2.0, 6.0)),
     ]:
         fingerprint(oil, rng, cx, cy, ang, a, b, p, sm)
-    for cx, cy, R, a0, a1, amp in [(95, 210, 120, -2.3, -0.9, 0.08), (230, -30, 110, 0.7, 2.4, 0.07),
-                                   (260, 160, 70, -3.0, -1.4, 0.05)]:
-        wipe(oil, rng, cx, cy, R, a0, a1, amp=amp)
+    # a few careless cloth wipes, different directions and lengths
+    for x, y, hd, L, w, amp in [(18, 150, -0.35, 190, 26, 0.09), (250, 30, 2.6, 140, 20, 0.08),
+                                (120, 60, 0.15, 95, 18, 0.07), (60, 175, -1.1, 70, 22, 0.06),
+                                (205, 120, 1.9, 85, 16, 0.06), (280, 170, -2.4, 60, 14, 0.05)]:
+        wipe(oil, rng, x, y, hd, L, w, amp)
     particles(dust, rng)
     np.clip(oil, 0, 1, out=oil)
     return oil, dust
