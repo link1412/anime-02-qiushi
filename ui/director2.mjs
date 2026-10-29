@@ -9,7 +9,7 @@ import { startMock, bus, release, chunksOf } from './mock2.mjs';
 import { buildTyping, buildLatin, compView, Q1, Q2, Q3 } from './typing.mjs';
 
 const FPS = 30;
-const ROOT = '/path/to/ep1';
+const ROOT = process.env.EP1 || new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 const OUT = process.env.OUT || `${ROOT}/build/ui_frames`;
 const BUILD = `${OUT}/..`;
 const MAXF = +(process.env.MAXF || 1e9);
@@ -123,8 +123,11 @@ clip('C', 0, (add) => {   // S7 英特纳雄耐尔是否能实现？
   const enter = ty.end + 0.35;
   add(enter, { kind: 'enter', key: 'enter' });
   add(enter + 1.0, { kind: 'gate', name: 'm0:start' });
+  // after sending: lights a cigarette while the model starts (lighter reflection + sound are
+  // driven by storyboard clip C "lighter", times relative to C_ENTER); hard cut during the exhale
+  const C_TAIL = +(process.env.C_TAIL || 7.4);
   Object.assign(A, { C_TYPE: 0.3, C_ENTER: enter });
-  return enter + 1.7;
+  return enter + C_TAIL;
 });
 
 let wf = 1;

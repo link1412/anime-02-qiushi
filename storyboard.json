@@ -519,7 +519,7 @@
   },
   {
    "id": "C",
-   "title": "S7 提问：英特纳雄耐尔是否能实现？",
+   "title": "S7 提问：英特纳雄耐尔是否能实现？· 点烟",
    "dur": "C_DUR+0",
    "seed": 2,
    "screen": {
@@ -566,6 +566,10 @@
     {
      "t": "C_ENTER+0",
      "label": "S7 回车（同一采样）→ 开始查资料"
+    },
+    {
+     "t": "C_ENTER+1.3",
+     "label": "S7 点烟：玻璃里打火机火焰倒影 → 吸 → 吐气（硬切）"
     }
    ],
    "keys": [
@@ -588,15 +592,63 @@
      "roll": 0.6
     },
     {
-     "t": "C_DUR+0.5",
-     "x": 1420,
-     "y": 1120,
-     "d": 250,
+     "t": "C_ENTER+1.6",
+     "x": 1400,
+     "y": 1180,
+     "d": 238,
      "yaw": -2.5,
      "pitch": 4.2,
      "roll": 0.6
+    },
+    {
+     "t": "C_ENTER+3.3",
+     "x": 1386,
+     "y": 1205,
+     "d": 233,
+     "yaw": -2.4,
+     "pitch": 4.0,
+     "roll": 1.3
+    },
+    {
+     "t": "C_ENTER+5.3",
+     "x": 1408,
+     "y": 1165,
+     "d": 244,
+     "yaw": -2.5,
+     "pitch": 4.3,
+     "roll": 0.8
+    },
+    {
+     "t": "C_DUR+0.5",
+     "x": 1420,
+     "y": 1150,
+     "d": 250,
+     "yaw": -2.5,
+     "pitch": 4.3,
+     "roll": 0.7
     }
-   ]
+   ],
+   "lighter": {
+    "strike": "C_ENTER+1.3",
+    "out": "C_ENTER+3.45",
+    "drag": [
+     "C_ENTER+2.0",
+     "C_ENTER+3.1"
+    ],
+    "exhale": "C_ENTER+5.0",
+    "pos": [
+     50,
+     58,
+     -460
+    ],
+    "ember": 1.0,
+    "gain": 1.0,
+    "sound": {
+     "lighter": "lighter_bigsoundbank_2131",
+     "drag": "bonus_drag_bigsoundbank_2132",
+     "exhale": "exhale_bigsoundbank_1405"
+    }
+   }
   },
   {
    "id": "D",

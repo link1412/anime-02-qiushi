@@ -2,9 +2,9 @@
 build/
 cache/
 preview/
-ref/
+/ref
 storyboard_history/
-ui/node_modules/
+ui/node_modules
 ui/*.png
 **/__pycache__/
 *.pyc

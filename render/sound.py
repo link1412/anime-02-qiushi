@@ -17,7 +17,7 @@ import camera
 from camera import TL, FPS, PP
 
 SR = 48000
-ROOT = os.environ.get('EP1', '/path/to/ep1')
+ROOT = os.environ.get('EP1', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ZERO_AFTER_TAP = 0.05        # digital zero from (stop tap + this) to the end of that clip
 
 
