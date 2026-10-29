@@ -7,6 +7,7 @@ const SEG = {
   huida: 'hui da', wo: 'wo', youren: 'you ren', hui: 'hui', buxin: 'bu xin', ruhe: 'ru he',
   zhengming: 'zheng ming', zheshinishuode: 'zhe shi ni shuo de', ne: 'ne',
   yingte: 'ying te', naxiong: 'na xiong', naier: 'nai er', shifou: 'shi fou', neng: 'neng', shixian: 'shi xian',
+  jinwan: 'jin wan', chishenme: 'chi shen me',
 };
 const ALT = { // single-char homophones of first syllable, as an IME would list
   ni: ['你', '尼', '泥', '拟', '逆'], zhe: ['这', '着', '者', '折', '哲'], shi: ['是', '时', '事', '使', '市'],
@@ -15,7 +16,7 @@ const ALT = { // single-char homophones of first syllable, as an IME would list
   hui: ['会', '回', '汇', '惠', '灰'], wo: ['我', '窝', '握', '沃', '卧'], you: ['有', '又', '由', '友', '右'],
   ru: ['如', '入', '乳', '儒', '茹'], zheng: ['正', '证', '整', '政', '争'], ne: ['呢', '哪', '讷', '那', '呐'],
   ying: ['英', '应', '影', '硬', '营'], na: ['那', '拿', '纳', '哪', '娜'], nai: ['耐', '奶', '乃', '奈', '氖'],
-  neng: ['能', '嫩', '恁', '能', '䏻'],
+  neng: ['能', '嫩', '恁', '能', '䏻'], jin: ['今', '进', '金', '近', '仅'], chi: ['吃', '迟', '持', '池', '尺'],
 };
 const FULLALT = { // extra multi-char candidates for the full phrase
   nijuede: ['你觉得', '你觉', '你决', '你'], zhege: ['这个', '这', '者', '折'], shijieshang: ['世界上', '世界', '视界', '是'],
@@ -27,6 +28,7 @@ const FULLALT = { // extra multi-char candidates for the full phrase
   ne: ['呢', '哪', '讷', '那'],
   yingte: ['英特', '英', '应', '影'], naxiong: ['那熊', '纳雄', '拿', '那'], naier: ['奈尔', '耐尔', '奶', '耐'],
   shifou: ['是否', '是', '时', '事'], neng: ['能', '嫩', '恁', '䏻'], shixian: ['实现', '时限', '视线', '是'],
+  jinwan: ['今晚', '金碗', '今', '进'], chishenme: ['吃什么', '吃', '迟', '持'],
 };
 
 function display(py, prefixLen) {
@@ -102,6 +104,8 @@ export const Q3 = [
   { py: 'yingte', zh: '英特' }, { py: 'naxiong', zh: '纳雄', pick: 2 }, { py: 'naier', zh: '耐尔', pick: 2 },
   { py: 'shifou', zh: '是否' }, { py: 'neng', zh: '能' }, { py: 'shixian', zh: '实现' }, { punct: '?' },
 ];
+// typed after 英特纳雄耐尔是否能实现? was selected and deleted
+export const Q4 = [{ py: 'jinwan', zh: '今晚' }, { py: 'chishenme', zh: '吃什么' }, { punct: '?' }];
 export const Q2 = [
   { py: 'youren', zh: '有人' }, { py: 'hui', zh: '会' }, { py: 'buxin', zh: '不信' }, { punct: ',' }, { pause: 0.25 },
   { py: 'wo', zh: '我' }, { py: 'ruhe', zh: '如何' }, { py: 'zhengming', zh: '证明', typo: { wrong: 'zhengmign', back: 2 } },

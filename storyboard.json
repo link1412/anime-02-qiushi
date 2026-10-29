@@ -523,7 +523,7 @@
   },
   {
    "id": "C",
-   "title": "S7 提问：英特纳雄耐尔是否能实现? → Mythos 立刻刷屏",
+   "title": "S7 打“英特纳雄耐尔是否能实现?” → 全选删除 → “今晚吃什么?” → Mythos 立刻刷屏",
    "dur": "C_DUR+0",
    "seed": 2,
    "screen": {
@@ -565,15 +565,19 @@
    "shots": [
     {
      "t": 0,
-     "label": "S7 打字：英特纳雄耐尔是否能实现?"
+     "label": "S7 打字:英特纳雄耐尔是否能实现?"
+    },
+    {
+     "t": "C_DEL+0",
+     "label": "S7 犹豫 → ⌘A 全选 → 删除"
+    },
+    {
+     "t": "C_TYPE2+0",
+     "label": "S7 改打:今晚吃什么?"
     },
     {
      "t": "C_ENTER+0",
-     "label": "S7 回车（同一采样）→ 开始查资料"
-    },
-    {
-     "t": "C_ENTER+1.3",
-     "label": "S7 点烟：玻璃里打火机火焰倒影 → 吸 → 吐气（硬切）"
+     "label": "S7 回车（同一采样）→ 0.15 s 后开始刷屏"
     }
    ],
    "keys": [
@@ -631,28 +635,7 @@
      "pitch": 4.3,
      "roll": 0.7
     }
-   ],
-   "lighter": {
-    "strike": "C_ENTER+1.3",
-    "out": "C_ENTER+3.45",
-    "drag": [
-     "C_ENTER+2.0",
-     "C_ENTER+3.1"
-    ],
-    "exhale": "C_ENTER+5.0",
-    "pos": [
-     -122.6,
-     -22.2,
-     -460.0
-    ],
-    "ember": 1.0,
-    "gain": 1.0,
-    "sound": {
-     "lighter": "lighter_bigsoundbank_2131",
-     "drag": "bonus_drag_bigsoundbank_2132",
-     "exhale": "exhale_bigsoundbank_1405"
-    }
-   }
+   ]
   },
   {
    "id": "D",
@@ -752,6 +735,104 @@
      "roll": 0.2
     }
    ]
+  },
+  {
+   "id": "W",
+   "title": "S8a′ 等待：还在刷；点烟（火焰倒影在左上角）",
+   "dur": "W_DUR+0",
+   "seed": 11,
+   "screen": {
+    "kind": "ui"
+   },
+   "clock": "01:07:40",
+   "battery": 79,
+   "charging": false,
+   "dawn": 0.02,
+   "stop_tap": null,
+   "macro": [],
+   "af": {
+    "start": "x1.25",
+    "intro": null,
+    "hunts": [
+     {
+      "t": 0,
+      "pts": [
+       [
+        0,
+        0.3
+       ],
+       [
+        0.25,
+        -0.05
+       ],
+       [
+        0.45,
+        0
+       ]
+      ]
+     }
+    ]
+   },
+   "shots": [
+    {
+     "t": 0,
+     "label": "S8a′ 一小时后：还在刷"
+    },
+    {
+     "t": "W_STRIKE+0",
+     "label": "S8a′ 点烟 → 吸 → 吐气时硬切"
+    }
+   ],
+   "keys": [
+    {
+     "t": 0,
+     "x": 1380,
+     "y": 1010,
+     "d": 305,
+     "yaw": -2.8,
+     "pitch": 5.0,
+     "roll": 0.8
+    },
+    {
+     "t": 3.0,
+     "x": 1392,
+     "y": 995,
+     "d": 298,
+     "yaw": -2.7,
+     "pitch": 4.9,
+     "roll": 0.7
+    },
+    {
+     "t": "W_DUR+0.5",
+     "x": 1400,
+     "y": 985,
+     "d": 294,
+     "yaw": -2.7,
+     "pitch": 4.8,
+     "roll": 0.7
+    }
+   ],
+   "lighter": {
+    "strike": "W_STRIKE+0",
+    "out": "W_STRIKE+2.15",
+    "drag": [
+     "W_STRIKE+0.7",
+     "W_STRIKE+1.8"
+    ],
+    "exhale": "W_STRIKE+3.7",
+    "pos": [
+     -145.6,
+     -56.3,
+     -460.0
+    ],
+    "ember": 1.0,
+    "gain": 1.0,
+    "sound": {
+     "lighter": "lighter_bigsoundbank_2131",
+     "drag": "bonus_drag_bigsoundbank_2132",
+     "exhale": "exhale_bigsoundbank_1405"
+    }
+   }
   },
   {
    "id": "E",
@@ -878,6 +959,87 @@
      "yaw": -2.0,
      "pitch": 4.0,
      "roll": 0.8
+    }
+   ]
+  },
+  {
+   "id": "X",
+   "title": "S8c′ 无聊：猛晃指针，macOS 把指针放大",
+   "dur": "X_DUR+0",
+   "seed": 12,
+   "screen": {
+    "kind": "ui"
+   },
+   "clock": "03:12:18",
+   "battery": 47,
+   "charging": false,
+   "dawn": 0.15,
+   "stop_tap": null,
+   "macro": [],
+   "af": {
+    "start": "x1.25",
+    "intro": null,
+    "hunts": [
+     {
+      "t": 0,
+      "pts": [
+       [
+        0,
+        0.3
+       ],
+       [
+        0.25,
+        -0.05
+       ],
+       [
+        0.45,
+        0
+       ]
+      ]
+     }
+    ]
+   },
+   "shots": [
+    {
+     "t": 0,
+     "label": "S8c′ 还在“思考中”"
+    },
+    {
+     "t": "X_SHAKE1+0",
+     "label": "S8c′ 晃指针 → 变大 → 停手缩回"
+    },
+    {
+     "t": "X_SHAKE2+0",
+     "label": "S8c′ 再晃一下"
+    }
+   ],
+   "keys": [
+    {
+     "t": 0,
+     "x": 1500,
+     "y": 1170,
+     "d": 282,
+     "yaw": -2.4,
+     "pitch": 4.6,
+     "roll": 0.6
+    },
+    {
+     "t": "X_SHAKE1+0.5",
+     "x": 1525,
+     "y": 1195,
+     "d": 272,
+     "yaw": -2.4,
+     "pitch": 4.5,
+     "roll": 0.6
+    },
+    {
+     "t": "X_DUR+0.5",
+     "x": 1540,
+     "y": 1215,
+     "d": 265,
+     "yaw": -2.4,
+     "pitch": 4.4,
+     "roll": 0.5
     }
    ]
   },

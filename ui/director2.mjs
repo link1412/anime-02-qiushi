@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 import fs from 'fs';
 import crypto from 'crypto';
 import { startMock, bus, release, chunksOf } from './mock2.mjs';
-import { buildTyping, buildLatin, compView, Q1, Q2, Q3 } from './typing.mjs';
+import { buildTyping, buildLatin, compView, Q1, Q2, Q3, Q4 } from './typing.mjs';
 
 const FPS = 30;
 const ROOT = process.env.EP1 || new URL('..', import.meta.url).pathname.replace(/\/$/, '');
@@ -25,32 +25,33 @@ const answerTurn = (id, reasoning, text) => ({ id, blocks: [
   { type: 'text', text, gate: 'text' },
 ], endGate: true });
 
+// The second question is "今晚吃什么?" (typed after deleting 英特纳雄耐尔是否能实现?). Mythos researches dinner all night.
 const URLS = [
-  'https://www.marxists.org/archive/marx/works/1848/communist-manifesto/', 'https://zh.wikipedia.org/wiki/国际歌', 'https://zh.wikipedia.org/wiki/巴黎公社', 'https://en.wikipedia.org/wiki/The_Internationale',
-  'https://zh.wikipedia.org/wiki/欧仁·鲍狄埃', 'https://zh.wikipedia.org/wiki/皮埃尔·狄盖特', 'https://zh.wikipedia.org/wiki/第一国际', 'https://zh.wikipedia.org/wiki/第二国际',
-  'https://www.marxists.org/archive/marx/works/1875/gotha/', 'https://zh.wikipedia.org/wiki/各尽所能，按需分配', 'https://zh.wikipedia.org/wiki/空想社会主义', 'https://zh.wikipedia.org/wiki/科学社会主义',
-  'https://en.wikipedia.org/wiki/Post-scarcity', 'https://zh.wikipedia.org/wiki/剩余价值', 'https://zh.wikipedia.org/wiki/历史唯物主义', 'https://en.wikipedia.org/wiki/Socialist_calculation_debate',
-  'https://en.wikipedia.org/wiki/Project_Cybersyn', 'https://zh.wikipedia.org/wiki/计划经济', 'https://en.wikipedia.org/wiki/Mondragon_Corporation', 'https://zh.wikipedia.org/wiki/合作社',
-  'https://en.wikipedia.org/wiki/Universal_basic_income', 'https://zh.wikipedia.org/wiki/自动化', 'https://en.wikipedia.org/wiki/Technological_unemployment', 'https://zh.wikipedia.org/wiki/基尼系数',
-  'https://ourworldindata.org/extreme-poverty', 'https://hdr.undp.org/data-center', 'https://data.worldbank.org/indicator/SI.POV.GINI', 'https://zh.wikipedia.org/wiki/福利国家',
-  'https://www.marxists.org/archive/marx/works/1867-c1/', 'https://zh.wikipedia.org/wiki/异化', 'https://zh.wikipedia.org/wiki/黑格尔', 'https://zh.wikipedia.org/wiki/费尔巴哈',
-  'https://en.wikipedia.org/wiki/Fully_Automated_Luxury_Communism', 'https://zh.wikipedia.org/wiki/乌托邦', 'https://en.wikipedia.org/wiki/Economic_calculation_problem', 'https://zh.wikipedia.org/wiki/生产力',
-  'https://zh.wikipedia.org/wiki/生产关系', 'https://en.wikipedia.org/wiki/Paris_Commune', 'https://zh.wikipedia.org/wiki/1871年', 'https://www.marxists.org/archive/lenin/works/1917/staterev/',
-  'https://zh.wikipedia.org/wiki/国家与革命', 'https://en.wikipedia.org/wiki/Withering_away_of_the_state', 'https://zh.wikipedia.org/wiki/大同', 'https://zh.wikipedia.org/wiki/礼记·礼运',
-  'https://en.wikipedia.org/wiki/Kardashev_scale', 'https://en.wikipedia.org/wiki/Artificial_general_intelligence', 'https://zh.wikipedia.org/wiki/人工智能', 'https://en.wikipedia.org/wiki/Scarcity',
+  'https://www.dianping.com/shanghai/ch10', 'https://zh.wikipedia.org/wiki/中国菜系', 'https://www.xiachufang.com/explore/', 'https://en.wikipedia.org/wiki/Buridan%27s_ass',
+  'https://zh.wikipedia.org/wiki/川菜', 'https://zh.wikipedia.org/wiki/粤菜', 'https://zh.wikipedia.org/wiki/鲁菜', 'https://zh.wikipedia.org/wiki/淮扬菜',
+  'https://zh.wikipedia.org/wiki/湘菜', 'https://zh.wikipedia.org/wiki/火锅', 'https://zh.wikipedia.org/wiki/麻辣烫', 'https://zh.wikipedia.org/wiki/螺蛳粉',
+  'https://en.wikipedia.org/wiki/Decision_fatigue', 'https://en.wikipedia.org/wiki/The_Paradox_of_Choice', 'https://zh.wikipedia.org/wiki/兰州牛肉面', 'https://zh.wikipedia.org/wiki/沙县小吃',
+  'https://zh.wikipedia.org/wiki/黄焖鸡米饭', 'https://zh.wikipedia.org/wiki/夜宵', 'https://zh.wikipedia.org/wiki/外卖', 'https://en.wikipedia.org/wiki/Online_food_ordering',
+  'https://www.who.int/news-room/fact-sheets/detail/healthy-diet', 'https://zh.wikipedia.org/wiki/中国居民膳食指南', 'https://en.wikipedia.org/wiki/Glycemic_index', 'https://zh.wikipedia.org/wiki/卡路里',
+  'https://en.wikipedia.org/wiki/Circadian_rhythm', 'https://en.wikipedia.org/wiki/Ghrelin', 'https://en.wikipedia.org/wiki/Hunger_(physiology)', 'https://guide.michelin.com/cn/zh_CN',
+  'https://en.wikipedia.org/wiki/Multi-armed_bandit', 'https://en.wikipedia.org/wiki/Knapsack_problem', 'https://en.wikipedia.org/wiki/Travelling_salesman_problem', 'https://en.wikipedia.org/wiki/Recommender_system',
+  'https://zh.wikipedia.org/wiki/饺子', 'https://zh.wikipedia.org/wiki/烧烤', 'https://zh.wikipedia.org/wiki/小龙虾', 'https://zh.wikipedia.org/wiki/粥',
+  'https://zh.wikipedia.org/wiki/方便面', 'https://en.wikipedia.org/wiki/Instant_noodles', 'https://zh.wikipedia.org/wiki/便利店', 'https://zh.wikipedia.org/wiki/煎饼果子',
+  'https://zh.wikipedia.org/wiki/二十四节气', 'https://zh.wikipedia.org/wiki/食疗', 'https://www.meishichina.com/', 'https://zh.wikipedia.org/wiki/早餐',
+  'https://en.wikipedia.org/wiki/Breakfast', 'https://zh.wikipedia.org/wiki/豆浆', 'https://zh.wikipedia.org/wiki/油条', 'https://en.wikipedia.org/wiki/Sunrise',
 ];
-const THOUGHTS = ['这个问题很大.先找原始文本.', 'Check the 1871 context first.', 'Original French lyric vs. 中文译本.', 'Compare the First and Second International.',
-  'Need a definition of "实现".', 'Post-scarcity arguments next.', 'Look at the calculation debate.', 'Cooperatives as partial evidence?', 'Data on inequality over time.',
-  'Does automation change the answer?', 'Back to Marx on distribution.', 'Lenin on the state.', '大同 is an older version of the same idea.', 'What would "能" even mean here?',
+const THOUGHTS = ['先确定用户在哪个城市.', 'Check what is still open after midnight.', 'Compare 川菜 vs 粤菜.', 'Nutrition first.',
+  'Need a definition of "今晚".', 'Is it still "今晚" after 00:00?', 'Decision fatigue is relevant.', "Buridan's ass: two equal options, no choice.", 'Model it as a multi-armed bandit.',
+  'Delivery times by district.', 'Budget unknown. Assume every budget.', 'No allergies stated. Check them all.', 'Weather affects appetite.', 'Glycemic index of 夜宵.',
   'Collect counter-arguments.', 'More sources.', 'Still more sources.', 'One more batch.', 'Cross-check.', 'Re-read the question.', 'Re-read the question again.', 'Gather everything.', 'Keep going.'];
-const PLAN_TITLES = ['先定义"英特纳雄耐尔"', '重新定义"实现"', '按 5 年 / 50 年 / 500 年分别论证', '从生产力角度论证', '从反面论证', '查 1871 年的原始语境',
-  '比较各国实践', '假设 AGI 已经实现', '假设 AGI 不存在', '统计所有失败案例', '统计所有成功案例', '给"能"下定义', '给"否"下定义', '把问题拆成 12 个子问题',
-  '把 12 个子问题合并回 1 个', '请用户澄清(放弃)', '换一种语言重新思考', '回到 Plan 1'];
+const PLAN_TITLES = ['先确定城市', '先定义"今晚"', '按 5 元 / 50 元 / 500 元分别推荐', '按热量排序', '按距离排序', '查营业到凌晨的店',
+  '列出所有菜系', '假设用户在减肥', '假设用户不在减肥', '比较外卖和自己做', '排除用户昨天吃过的(未知)', '给"吃"下定义', '给"什么"下定义', '把问题拆成 12 个子问题',
+  '把 12 个子问题合并回 1 个', '请用户澄清(放弃)', '考虑用户可能已经饿了', '回到 Plan 1'];
 const plans = (n) => Array.from({ length: n }, (_, i) => ({ id: String(i + 1), content: `Plan ${i + 1}: ${PLAN_TITLES[i % PLAN_TITLES.length]}`, status: i < n - 1 ? 'completed' : 'in_progress', priority: 'high' }));
 
 // Mythos turns: m0 (C, on enter) + C flood + D catch-up burst + D flood + E burst + E gated
-const WF = { C: 13, D_BURST: 6, D_FLOOD: 18, E_BURST: 5, E_GATED: 2 };
-const N_WF = 1 + WF.C + WF.D_BURST + WF.D_FLOOD + WF.E_BURST + WF.E_GATED;
+const WF = { C: 5, D_BURST: 6, D_FLOOD: 18, W_BURST: 4, W_FLOOD: 10, E_BURST: 5, E_GATED: 2 };
+const N_WF = 1 + WF.C + WF.D_BURST + WF.D_FLOOD + WF.W_BURST + WF.W_FLOOD + WF.E_BURST + WF.E_GATED;
 const PER_TURN = 7;
 const URL_VARIANTS = [() => '', () => '?action=raw', () => '#References', () => '?printable=yes', (k) => `?oldid=${48213307 - 7919 * k % 900000}`,
   (k) => `#cite_note-${1 + k % 37}`, () => '?action=history', (k) => `?diff=prev&oldid=${51022411 - 3571 * k % 700000}`];
@@ -64,7 +65,7 @@ const TODO_STEPS = [37, 52, 66, 80, 94, 108];
 for (const n of TODO_STEPS) script.push({ id: `t${n}`, blocks: [{ type: 'thinking', text: `Plan ${n - 1} didn't work. Plan ${n}.\n\n` }, { type: 'tool', name: 'todowrite', input: { todos: plans(n) } }] });
 script.push({ id: 'g1', usage: { input_tokens: 196500 }, blocks: [{ type: 'thinking', text: 'Context is full. Summarise and continue.\n\n' }, { type: 'text', text: '继续.' }] });
 script.push({ id: 'g2', usage: { input_tokens: 197800 }, blocks: [{ type: 'thinking', text: 'Plan 109. Context is full again.\n\n' }, { type: 'text', text: '继续.' }] });
-const H_THINK = 'Plan 110. Suppose "实现" means a stable state rather than an event. Then the question becomes whether such a state can persist under scarcity, which depends on productivity, which depends on automation, which depends on energy, which depends on — let me restart from the definitions. Plan 111. Plan 112. Plan 113. Plan 114. Plan 115. Plan 116. ';
+const H_THINK = 'Plan 110. Suppose "今晚" ends at sunrise. Sunrise here is around 06:10, so the question is about to become "早上吃什么", which needs a new plan, which needs the city, which needs the budget, which needs — let me restart from the definitions. Plan 111. Plan 112. Plan 113. Plan 114. Plan 115. Plan 116. ';
 script.push({ id: 'h', blocks: [{ type: 'thinking', text: H_THINK, gated: true, chunk: 5 }, { type: 'tool', name: 'todowrite', input: { todos: plans(117) }, gate: 'j' }] });
 const E403 = { status: 403, type: 'permission_error', message: 'Forbidden' };
 script.push({ id: 'k0', error: E403 }, { id: 'k1', error: E403 }, { id: 'k2', error: E403 },
@@ -145,19 +146,22 @@ clip('B', 0, (add) => {   // S6 pick Mythos 10 (scroll the real model list), eff
 
 let wf = 1;
 const wfIds = (n) => Array.from({ length: n }, () => `m${wf++}`);
-clip('C', 0, (add) => {   // S7 英特纳雄耐尔是否能实现?
+clip('C', 0, (add) => {   // S7 英特纳雄耐尔是否能实现? -> select all, delete -> 今晚吃什么?
   const ty = buildTyping(0.3, Q3, 3031);
   typingEv(add, ty, 3);
-  const enter = ty.end + 0.35;
+  const DEL = ty.end + 0.75;                        // second thoughts
+  add(DEL, { kind: 'key', press: 'Meta+a', key: 'letter' });
+  add(DEL + 0.42, { kind: 'key', press: 'Backspace', key: 'backspace' });
+  const ty4 = buildTyping(DEL + 0.42 + 0.55, Q4, 3041);
+  typingEv(add, ty4, 4);
+  const enter = ty4.end + 0.35;
   add(enter, { kind: 'enter', key: 'enter' });
   // Mythos: no pause at all, and it does not stop
   add(enter + 0.15, { kind: 'gate', name: 'm0:start' });
-  // after sending: lights a cigarette while the model starts (lighter reflection + sound are
-  // driven by storyboard clip C "lighter", times relative to C_ENTER); hard cut during the exhale
-  const C_TAIL = +(process.env.C_TAIL || 7.4);
+  const C_TAIL = +(process.env.C_TAIL || 2.6);
   const ids = wfIds(WF.C);
   ids.forEach((id, i) => add(enter + 0.55 + i * (C_TAIL - 0.8) / ids.length, { kind: 'gate', name: `${id}:start` }));
-  Object.assign(A, { C_TYPE: 0.3, C_ENTER: enter });
+  Object.assign(A, { C_TYPE: 0.3, C_DEL: DEL, C_TYPE2: DEL + 0.97, C_ENTER: enter });
   return enter + C_TAIL;
 });
 
@@ -177,6 +181,14 @@ clip('D', 0, (add) => {  // S8a flood: scroll up to read, it keeps coming, "↓"
   Object.assign(A, { D_UP: UP, D_JUMP: JUMP });
   return DUR;
 });
+clip('W', 0, (add) => {  // S8a' waiting: it is still going; lights a cigarette (storyboard W.lighter drives flame + sound)
+  const DUR = 7.0;
+  add(0, { kind: 'burst', ids: wfIds(WF.W_BURST) });
+  const ids = wfIds(WF.W_FLOOD);
+  ids.forEach((id, i) => add(0.3 + i * (DUR - 0.5) / ids.length, { kind: 'gate', name: `${id}:start` }));
+  Object.assign(A, { W_STRIKE: 0.9 });
+  return DUR;
+});
 clip('E', 2.5, (add) => {  // S8b clock 02:14 · 61%
   add(0, { kind: 'burst', ids: wfIds(WF.E_BURST) });
   wfIds(WF.E_GATED).forEach((id, i) => add(0.9 + i * 0.9, { kind: 'gate', name: `${id}:start` }));
@@ -186,6 +198,14 @@ clip('F', 3.0, (add) => {  // S8c todo 37 -> 108
   add(0, { kind: 'burst', ids: ['t37'] });
   TODO_STEPS.slice(1).forEach((n, i) => add(0.45 + i * 0.5, { kind: 'gate', name: `t${n}:start` }));
   return 3.0;
+});
+clip('X', 0, (add) => {  // S8c' bored: Mythos is "thinking"; the pointer gets shaken until macOS blows it up, twice
+  moveTo(add, 0.35, 0.45, { rel: [-70, 40] }, { arc: 0.2 });
+  const S1 = 0.95, S1D = 1.7, S2 = S1 + S1D + 0.85, S2D = 0.95;
+  add(S1, { kind: 'shake', dur: S1D, amp: [175, 34], freq: 4.6 });
+  add(S2, { kind: 'shake', dur: S2D, amp: [140, 26], freq: 5.1 });
+  Object.assign(A, { X_SHAKE1: S1, X_SHAKE2: S2 });
+  return S2 + S2D + 1.1;
 });
 clip('G', 2.6, (add) => {  // S8d compaction x2
   add(0.15, { kind: 'gate', name: 'g1:start' });
@@ -248,8 +268,8 @@ if (process.env.PLAN_ONLY) process.exit(0);
 fs.mkdirSync(OUT, { recursive: true });
 startMock({ port: 4320, script, logFile: '/tmp/film2/mock_director.log',
   compactSummary: (k) => k === 0
-    ? 'Summary: the user asked whether 英特纳雄耐尔 can be realised. ~300 sources fetched, Plans 1–108 drafted, none conclusive. Continue from Plan 108.'
-    : 'Summary: the user asked whether 英特纳雄耐尔 can be realised. Plans 1–109 drafted, none conclusive. Continue from Plan 109.' });
+    ? 'Summary: the user asked what to eat tonight. ~300 sources fetched, Plans 1–108 drafted, none conclusive. Continue from Plan 108.'
+    : 'Summary: the user asked what to eat tonight. Plans 1–109 drafted, none conclusive. Continue from Plan 109.' });
 let mainCount = 0; const reqWaiters = [];
 bus.on('main-request', (k) => { mainCount = k + 1; reqWaiters.splice(0).forEach(f => f()); });
 const waitMain = (n, ms = 20000) => new Promise((res) => {
@@ -328,7 +348,7 @@ const FRAME_PATCH = async (state) => page.evaluate((s) => {
   const caret = document.getElementById('film-caret'), ul = document.getElementById('film-ul'), cand = document.getElementById('film-cand');
   let crect = null;
   const sel = getSelection();
-  if (ed && document.activeElement === ed && sel.rangeCount) {
+  if (ed && document.activeElement === ed && sel.rangeCount && sel.isCollapsed) {
     const r = sel.getRangeAt(0).cloneRange(); let rr = r.getBoundingClientRect();
     if (!rr.height) { const er = ed.getBoundingClientRect(); const cs = getComputedStyle(ed); rr = { x: er.x + parseFloat(cs.paddingLeft), y: er.y + parseFloat(cs.paddingTop) + 2, height: 16 }; }
     crect = { x: rr.x, y: rr.y, h: rr.height || 16 };
@@ -401,6 +421,25 @@ async function startMove(e) {
   motion = { t0: e.t, t1: e.t + e.dur, x0: cur.x, y0: cur.y, x1: p1.x, y1: p1.y, arc: e.arc ?? 0 };
   cur.visible = true;
 }
+async function startShake(e) {
+  if (cur.x === null) { cur.x = 700; cur.y = 450; }
+  motion = { shake: true, t0: e.t, t1: e.t + e.dur, cx: cur.x, cy: cur.y, ax: e.amp[0], ay: e.amp[1], f: e.freq };
+  shakes.push({ t0: e.t, t1: e.t + e.dur });
+  cur.visible = true;
+}
+// macOS grows the pointer while it is being shaken (after ~0.3 s), up to ~4x, and shrinks it back when it stops
+const shakes = [];
+const SHAKE_MAX = 4.2;
+const pointerScale = (ts) => {
+  let s = 1;
+  for (const k of shakes) {
+    const sm = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
+    const grow = sm((Math.min(ts, k.t1) - k.t0 - 0.28) / 0.32);
+    const shrink = ts > k.t1 ? sm((ts - k.t1) / 0.42) : 0;
+    s = Math.max(s, 1 + (SHAKE_MAX - 1) * grow * (1 - shrink));
+  }
+  return s;
+};
 async function startScroll(e) {
   let dy = e.dy ?? 0;
   if (e.target) {
@@ -421,7 +460,16 @@ async function startScroll(e) {
 // trackpad flick: fingers accelerate briefly, then momentum decays
 const flick = (u) => { const k = 3.2; const a = Math.min(1, u / 0.12); const g = (1 - Math.exp(-k * u)) / (1 - Math.exp(-k)); return a < 1 ? g * (a * a * (3 - 2 * a)) : g; };
 async function pointerAt(ts) {
-  if (motion) {
+  if (motion && motion.shake) {
+    const tau = ts - motion.t0, T = motion.t1 - motion.t0;
+    const env = Math.min(1, tau / 0.12, Math.max(0, (T - tau) / 0.12));
+    const w = 2 * Math.PI * motion.f * tau;
+    // hand wobble: not a perfect sine (wrist), slight vertical drift
+    cur.x = motion.cx + motion.ax * env * (Math.sin(w) + 0.18 * Math.sin(2 * w + 0.7));
+    cur.y = motion.cy + motion.ay * env * Math.sin(0.5 * w + 1.1) + 6 * Math.sin(1.7 * w);
+    await page.mouse.move(cur.x, cur.y);
+    if (tau >= T) motion = null;
+  } else if (motion) {
     const u = Math.min(1, Math.max(0, (ts - motion.t0) / (motion.t1 - motion.t0)));
     const m = minJerk(u);
     const dx = motion.x1 - motion.x0, dy = motion.y1 - motion.y0;
@@ -437,7 +485,7 @@ async function pointerAt(ts) {
     if (u >= 1) scroll = null;
   }
 }
-const pointerBusy = (t) => !!motion || !!scroll || events.slice(ei).some(e => (e.kind === 'move' || e.kind === 'scroll' || e.kind === 'mclick') && e.t < t + 1 / FPS) || t - lastPointerT < 0.3;
+const pointerBusy = (t) => !!motion || !!scroll || events.slice(ei).some(e => (e.kind === 'move' || e.kind === 'scroll' || e.kind === 'mclick' || e.kind === 'shake') && e.t < t + 1 / FPS) || t - lastPointerT < 0.3;
 const cursorShape = (x, y) => page.evaluate(({ x, y }) => {
   const el = document.elementFromPoint(x, y); if (!el) return 'arrow';
   const c = getComputedStyle(el).cursor;
@@ -513,6 +561,7 @@ for (let f = 0; f < Math.min(NF, MAXF); f++) {
     else if (e.kind === 'burst') { await burst(e); gated = true; }
     else if (e.kind === 'move') { await startMove(e); lastPointerT = t; ui = true; }
     else if (e.kind === 'scroll') { await startScroll(e); lastPointerT = t; }
+    else if (e.kind === 'shake') { await startShake(e); lastPointerT = t; }
     else if (e.kind === 'mclick') {
       if (motion) { motion.t1 = e.t; await pointerAt(e.t); }
       await page.mouse.move(cur.x, cur.y); await page.mouse.down(); await page.mouse.up();
@@ -540,7 +589,12 @@ for (let f = 0; f < Math.min(NF, MAXF); f++) {
     await page.clock.runFor(1000 / FPS / nsub);
     if (gated || nav || ui || nsub > 1) await page.waitForTimeout(nsub > 1 ? 25 : 50);
     await FRAME_PATCH({ ms: ts * 1000, caretOn: caretOn || (!!comp), marked: !!comp, markedLen, cands, selIdx: comp ? Math.max(0, (comp.sel || 1) - 1) : 0 });
-    const c = cur.visible && cur.x !== null ? [Math.round(cur.x * 100) / 100, Math.round(cur.y * 100) / 100, await cursorShape(cur.x, cur.y)] : null;
+    let c = null;
+    if (cur.visible && cur.x !== null) {
+      const sc = pointerScale(ts);
+      c = [Math.round(cur.x * 100) / 100, Math.round(cur.y * 100) / 100, sc > 1.02 ? 'arrow' : await cursorShape(cur.x, cur.y)];
+      if (sc > 1.002) c.push(Math.round(sc * 1000) / 1000);
+    }
     if (f >= STARTF) shots.push([await shoot(), c]);
   }
   if (f >= STARTF) {

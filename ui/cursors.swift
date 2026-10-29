@@ -1,7 +1,7 @@
 import AppKit
 _ = NSApplication.shared
 let out = CommandLine.arguments[1]
-let S: CGFloat = 4   // render scale (px per pt)
+let S: CGFloat = CGFloat(Double(CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "4") ?? 4)   // render scale (px per pt)
 let cs: [(String, NSCursor)] = [("arrow", .arrow), ("hand", .pointingHand), ("ibeam", .iBeam)]
 var meta: [String: Any] = [:]
 for (n, c) in cs {

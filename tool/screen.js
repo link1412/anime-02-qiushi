@@ -59,9 +59,9 @@ export class Screen {
   _drawCursor(cur) {
     const m = this.S.cursorMeta[cur[2]], im = this.cursorImgs.get(cur[2]);
     if (!m || !im) return;
-    const k = 2 / m.scale, s = this.S.ui.cssScale || 1.5;
+    const z = cur[3] || 1, k = 2 * z / m.scale, s = this.S.ui.cssScale || 1.5;   // z: macOS shake-to-locate size
     const ctx = this.winCanvas.getContext('2d');
-    ctx.drawImage(im, cur[0] * s - m.hx * 2, cur[1] * s - m.hy * 2, im.width * k, im.height * k);
+    ctx.drawImage(im, cur[0] * s - m.hx * 2 * z, cur[1] * s - m.hy * 2 * z, im.width * k, im.height * k);
   }
 
   uiName(f) {

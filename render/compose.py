@@ -142,24 +142,26 @@ def subframes(f):
 CSS_SCALE = 1.5                 # captured window: css px -> panel px
 
 
-@functools.lru_cache(maxsize=4)
-def _cursor_sprite(shape):
+@functools.lru_cache(maxsize=16)
+def _cursor_sprite(shape, size=1.0):
+    """size > 1: macOS "shake to locate" enlargement (redrawn from vector art, so it stays sharp)."""
     meta = json.load(open(f'{ROOT}/ref/cursor/meta.json'))[shape]
     im = cv2.imread(f'{ROOT}/ref/cursor/{shape}.png', cv2.IMREAD_UNCHANGED).astype(np.float32) / 255
-    k = 2.0 / meta['scale']
+    k = 2.0 * size / meta['scale']
     im[..., :3] *= im[..., 3:4]                                # PNG is straight alpha: premultiply before filtering
     im = cv2.resize(im, (round(im.shape[1] * k), round(im.shape[0] * k)), interpolation=cv2.INTER_AREA)
     a = im[..., 3:4]
     rgb = cv2.cvtColor(im[..., :3], cv2.COLOR_BGR2RGB)      # premultiplied
-    return rgb * 255, a, meta['hx'] * 2, meta['hy'] * 2
+    return rgb * 255, a, meta['hx'] * 2 * size, meta['hy'] * 2 * size
 
 
 def draw_cursor(P, cur):
     """composite the pointer onto a panel image (uint8 RGB, panel coords incl. notch strip)."""
     if not cur:
         return P
-    x, y, shape = cur
-    rgb, a, hx, hy = _cursor_sprite(shape)
+    x, y, shape = cur[:3]
+    size = round(float(cur[3]), 3) if len(cur) > 3 else 1.0
+    rgb, a, hx, hy = _cursor_sprite(shape, size)
     px = WIN_X + x * CSS_SCALE - hx
     py = NOTCH + WIN_Y + y * CSS_SCALE - hy
     ix, iy = int(np.floor(px)), int(np.floor(py))
