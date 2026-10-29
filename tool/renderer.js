@@ -17,7 +17,40 @@ uniform int uNT, uTaps;
 uniform float uFx, uFocus, uMacro, uExposure, uDawn, uGain, uPhys, uMeter, uDof;
 uniform uint uFrame;
 uniform vec3 uLamp, uWindow;
+// glass grime (render/smudge.py texture) and the lighter reflection (render/lighter.py)
+uniform sampler2D uGrime; uniform float uGrimeOn, uGap, uTexMM; uniform vec2 uGrimeMM;
+uniform float uLOn, uFlameI, uLean, uFlameCoc, uEmberI, uSpark, uAmbB; uniform vec4 uFlame, uEmber; uniform vec3 uFlameW;
 out vec4 outColor;
+const vec3 WARM = vec3(1.0, 0.82, 0.6), FLAME_RGB = vec3(1.0, 0.52, 0.16), CORE_RGB = vec3(1.0, 0.78, 0.42);
+vec3 lobes(vec3 Rf, vec3 P, float w){
+  vec3 o = exp((dot(Rf, normalize(uLamp)) - 1.0) / w) * (1.0 - 0.75 * uDawn) * vec3(1.0, 0.8, 0.55);
+  o += exp((dot(Rf, normalize(uWindow)) - 1.0) / w) * 1.6 * uDawn * vec3(0.78, 0.9, 1.08);
+  if (uLOn > 0.5) o += exp((dot(Rf, normalize(uFlameW - P)) - 1.0) / w) * FLAME_RGB * uFlameI * 4.5;
+  return o;
+}
+vec3 flameSprite(vec2 p){
+  vec3 o = vec3(0.0);
+  float c = uFlameCoc;
+  if (uFlameI > 0.0) {
+    vec2 q = p - uFlame.xy; float W = uFlame.z, H = uFlame.w;
+    float yl = -q.y / max(H, 1e-3), dxl = q.x - uLean * yl * H;
+    float wl = 0.5 * W * sqrt(clamp(1.0 - yl, 0.0, 1.0)) * clamp(yl * 4.0 + 0.6, 0.0, 1.0);
+    float d = max(abs(dxl) - wl, max(-(yl + 0.08) * H, (yl - 1.0) * H));
+    float body = smoothstep(0.5 * c + 1.0, -0.5 * c - 1.0, d) * (W / (W + 0.8 * c)) * (H / (H + 0.5 * c));
+    float core = exp(-pow(dxl / (W * 0.18 + 0.5 + 0.3 * c), 2.0) - pow((yl - 0.25) / (0.22 + 0.3 * c / H), 2.0)) * (W / (W + c));
+    o += (body * FLAME_RGB + core * CORE_RGB * 0.8) * 1.9 * uFlameI;
+    o += exp(-length(q) / 45.0) * 0.06 * uFlameI * FLAME_RGB;           // bloom
+  }
+  if (uEmberI > 0.0) {
+    float r = max(0.5 * uEmber.w, uEmber.z);
+    o += smoothstep(r + 1.0, r - 1.0, length(p - uEmber.xy)) * pow(uEmber.z / r, 2.0) * 0.55 * uEmberI * vec3(1.0, 0.3, 0.06);
+  }
+  if (uSpark > 0.0) {
+    float r = max(0.5 * c, 1.0);
+    o += smoothstep(r + 1.0, r - 1.0, length(p - uFlame.xy - vec2(0.0, -0.3 * uFlame.w))) * uSpark * 0.6 / (r * r) * vec3(1.0, 0.85, 0.6);
+  }
+  return o;
+}
 
 float sdRound(vec2 p, vec2 b, float r){ vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
 float winSd(vec2 px){ vec2 w = px - uWinRect.xy; return sdRound(w - uWinRect.zw * 0.5, uWinRect.zw * 0.5, uRadius); }
@@ -116,6 +149,23 @@ void main(){
   float cw = dot(Rf, normalize(uWindow));
   refl += (exp((cw - 1.0) / 0.02) * 2.6 + exp((cw - 1.0) / 0.12) * 0.35) * uDawn * vec3(0.78, 0.9, 1.08);
   img += refl * 0.035;
+  // glass layer: grime haze / occlusion and its scatter of the room light; lighter reflection
+  {
+    float sg = (-uGap - uC0.z) / Dc.z;
+    vec2 Xg = uC0.xy + sg * Dc.xy;
+    vec3 Pg = vec3(Xg, -uGap);
+    float fpt = sg / uFx / uTexMM;
+    float cg = A * abs(sg - uFocus) / max(sg, 1e-3) * uDof;
+    float sigT = length(vec2(0.5 * fpt * max(viewScale, 1.0), cg / 2.4 * fpt));
+    vec2 gd = uGrimeOn > 0.5 ? textureLod(uGrime, Xg / uGrimeMM, log2(max(sigT / 0.6, 1.0))).rg : vec2(0.0);
+    float oil = gd.r, dust = gd.g;
+    float h = clamp(0.30 * oil + 0.35 * dust, 0.0, 0.6);
+    float s0 = -uC0.z / Dc.z; vec2 px0 = (uC0.xy + s0 * Dc.xy) / uPP;
+    img = img * (1.0 - h - 0.25 * dust) + fetchL(px0, 3.6) * h;
+    float amb = 0.015 + 0.045 * uDawn + 3.0 * uAmbB;
+    img += 0.035 * oil * (amb * WARM + lobes(Rf, Pg, 0.02)) + 0.15 * dust * (amb * WARM + lobes(Rf, Pg, 0.08));
+    if (uLOn > 0.5) img += uAmbB * WARM + flameSprite(p);
+  }
   vec2 q = p - uOut * 0.5; float rr = dot(q, q) / dot(uOut * 0.5, uOut * 0.5);
   img *= 1.0 - 0.16 * rr;
   img *= vec3(0.965, 1.0, 1.05) * uExposure;
@@ -162,6 +212,20 @@ export class Renderer {
       win: this._mk(G.WIN_W, G.WIN_H),
       bar: this._mk(G.BAR[2], G.BAR[3]),
     };
+    this.grime = gl.createTexture(); this.grimeOK = false; this.onReady = null;
+    const im = new Image();
+    im.onload = () => {
+      gl.bindTexture(gl.TEXTURE_2D, this.grime);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, im);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      this.grimeOK = true; if (this.onReady) this.onReady();
+    };
+    im.onerror = () => console.warn('build/smudge.png missing: run python3 render/smudge.py');
+    im.src = '/build/smudge.png';
     this.winRect = [G.WIN_X, G.WIN_Y + G.NOTCH, G.WIN_W, G.WIN_H];
     this.barRect = [G.BAR[0], G.BAR[1] + G.NOTCH, G.BAR[2], G.BAR[3]];
     // metering target
@@ -232,6 +296,15 @@ export class Renderer {
     gl.uniform1ui(u.uFrame, (P.frame >>> 0) + 1);
     gl.uniform3fv(u.uLamp, P.lamp);
     gl.uniform3fv(u.uWindow, P.window || [0.16, -0.21, -0.96]);
+    gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, this.grime); gl.uniform1i(u.uGrime, 3);
+    gl.uniform1f(u.uGrimeOn, this.grimeOK && P.grime !== false ? 1 : 0);
+    gl.uniform1f(u.uGap, 0.7); gl.uniform1f(u.uTexMM, 0.05); gl.uniform2f(u.uGrimeMM, 302.4, 196.4);
+    const L = P.light || { on: 0 };
+    gl.uniform1f(u.uLOn, L.on ? 1 : 0);
+    gl.uniform1f(u.uFlameI, L.on ? L.flameI : 0); gl.uniform1f(u.uLean, L.lean || 0); gl.uniform1f(u.uFlameCoc, L.flameCoc || 0);
+    gl.uniform4fv(u.uFlame, L.flame || [0, 0, 1, 1]); gl.uniform4fv(u.uEmber, L.ember || [0, 0, 1, 1]);
+    gl.uniform1f(u.uEmberI, L.on ? L.emberI : 0); gl.uniform1f(u.uSpark, L.on ? L.spark : 0);
+    gl.uniform3fv(u.uFlameW, L.flameWorld || [0, 0, -500]); gl.uniform1f(u.uAmbB, L.amb || 0);
   }
 
   meter(P) {

@@ -4,7 +4,7 @@ import json, os, functools
 import numpy as np
 import cv2
 
-ROOT = os.environ.get('EP1', '/path/to/ep1')
+ROOT = os.environ.get('EP1', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 B = f'{ROOT}/build'
 PANEL_W, PANEL_H = 3024, 1964
 NOTCH = 74                     # rows above the 3024x1890 desktop (unused, black)

@@ -1,6 +1,7 @@
 import { Rig, makeTval, retime } from './pose.js';
 import { Renderer } from './renderer.js';
 import { Screen, valueAt } from './screen.js';
+import { lighterState, lighterUniforms } from './lighter.js';
 
 const $ = (s) => document.querySelector(s);
 const clamp = (x, a, b) => Math.min(Math.max(x, a), b);
@@ -29,6 +30,7 @@ async function init() {
   sb = structuredClone(S.storyboard);
   savedJSON = JSON.stringify(sb);
   R = new Renderer($('#gl'), S.geom);
+  R.onReady = () => { needs = true; };
   screen = new Screen(S, R);
   screen.tval = tval;
   await screen.init();
@@ -177,7 +179,8 @@ async function renderFrame(f) {
     const p = clip.pose(u);
     const focus = rig.focus[f];
     const base = { PP: S.consts.PP, fx: p.fx, focus, macro: p.macro, dawn: valueAt(clip.raw.dawn ?? 0, u),
-                   lamp: S.render.LAMP, window: S.render.WINDOW, frame: f, phys: opts.phys, dof: opts.dof };
+                   lamp: S.render.LAMP, window: S.render.WINDOW, frame: f, phys: opts.phys, dof: opts.dof,
+                   light: lighterUniforms(lighterState(clip.raw.lighter, u, rig.tval), p, focus) };
     const L = R.meter({ ...base, pose0: p, pose1: p, nt: 1, exposure: 1, gain: 0 });
     const expo = exposureFor(f, loc, L, p.macro);
     const shut = shutterTime(expo, p.macro);

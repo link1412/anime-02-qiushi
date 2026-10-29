@@ -10,7 +10,7 @@ tool/pose.js is a line-by-line port of this file for the browser preview; keep t
 import json, math, os, re, functools
 import numpy as np
 
-ROOT = os.environ.get('EP1', '/path/to/ep1')
+ROOT = os.environ.get('EP1', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TL = json.load(open(f'{ROOT}/build/timeline.json'))
 FPS = TL['FPS']
 PP = 0.1           # panel pixel pitch, mm (14" MacBook Pro, 254 ppi)

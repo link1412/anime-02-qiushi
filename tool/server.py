@@ -24,7 +24,7 @@ PORT = int(os.environ.get('PORT', 8765))
 SB_PATH = os.path.join(ROOT, 'storyboard.json')
 HIST = os.path.join(ROOT, 'storyboard_history')
 CACHE = os.path.join(ROOT, 'cache')
-ALLOWED = ('/tool/', '/build/ui_frames/', '/build/clock/', '/build/battery/', '/build/audio.wav', '/cache/')
+ALLOWED = ('/tool/', '/build/ui_frames/', '/build/clock/', '/build/battery/', '/build/audio.wav', '/build/smudge.png', '/build/sfx_', '/cache/')
 _phys_lock = threading.Lock()
 
 
