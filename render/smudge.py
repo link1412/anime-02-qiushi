@@ -118,6 +118,7 @@ def wipe(oil, rng, x, y, heading, length, width=22.0, amp=0.08):
         pts.append((x, y, hd, u))
         curv = sum(ks[j] * math.sin(2 * np.pi * (j + 1) * 0.6 * u + kp[j]) for j in range(4)) * 0.03
         hd += curv * length / n * 0.6 + rng.normal(0, 0.004)
+        hd = heading + float(np.clip(hd - heading, -0.9, 0.9))   # an arm sweep, never a loop
         x += math.cos(hd) * length / n; y += math.sin(hd) * length / n
     P = np.array(pts)
     u = P[:, 3]
