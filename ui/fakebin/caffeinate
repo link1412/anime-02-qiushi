@@ -1,0 +1,4 @@
+#!/bin/sh
+# Film stand-in (isolated capture instance only): prints nothing, changes nothing, exits at once.
+echo "$(date +%s) caffeinate $*" >> /tmp/film2/fakebin.log
+exit 0

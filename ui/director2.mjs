@@ -91,14 +91,31 @@ const script = [answerTurn('r0', R1TXT, '实事求是.'), answerTurn('r1', R2TXT
 for (let i = 0; i < N_WF; i++) {
   const sp = SPECIAL_URLS[i] || [];
   script.push({ id: `m${i}`, blocks: [{ type: 'thinking', text: THOUGHTS[i % THOUGHTS.length] + '\n\n' },
+    ...(THOUGHTS[i % THOUGHTS.length].includes('Remove sleep') ? [{ type: 'tool', name: 'bash', input: { command: 'caffeinate -dis', description: 'Remove sleep' } }] : []),
     ...Array.from({ length: PER_TURN }, (_, j) => ({ type: 'tool', name: 'webfetch', input: { url: j < sp.length ? sp[j] : urlAt(i * PER_TURN + j), format: 'markdown' } }))] });
 }
+// clip Z (after X): Mythos drives the Mac through the log-only "computer" MCP (ui/zrec/mcp_computer.mjs).
+// The Spotlight / Maps picture is the real take (build/ztake), laid in by compose on the zmap.json schedule.
+const ZMAP = JSON.parse(fs.readFileSync(`${ROOT}/ui/zrec/zmap.json`, 'utf8'));
+const Z_CLICK = ZMAP.click_dst || [ZMAP.click_src[0] + ZMAP.mp_dst[0] - ZMAP.mp_src[0], ZMAP.click_src[1] + ZMAP.mp_dst[1] - ZMAP.mp_src[1]];
+const zkey = (keys) => ({ type: 'tool', name: 'computer_key', input: { keys } });
+const ztype = (text) => ({ type: 'tool', name: 'computer_type', input: { text } });
+const Z_TURNS = [
+  ['z0', [{ type: 'thinking', text: 'Shop downstairs opens 06:30. "Probably." Check it myself.\n\n' }, zkey('cmd+space')]],
+  ['z1', [ztype('map')]], ['z2', [zkey('return')]], ['z3', [zkey('cmd+f')]], ['z4', [ztype('breakfast')]], ['z5', [zkey('return')]],
+  ['z6', [{ type: 'thinking', text: '30 results. First: 麦当劳 (上海SK大厦店).\n\n' }, { type: 'tool', name: 'computer_click', input: { x: Z_CLICK[0], y: Z_CLICK[1] } }]],
+  ['z7', [{ type: 'thinking', text: 'Opens 07:00. Not 06:30. "Probably" was wrong. Recompute everything.\n\n' }, zkey('cmd+q')]],
+];
 const TODO_STEPS = [37, 52, 66, 80, 94, 108];
 for (const n of TODO_STEPS) script.push({ id: `t${n}`, blocks: [{ type: 'thinking', text: `Plan ${n - 1} didn't work. Plan ${n}.\n\n` }, { type: 'tool', name: 'todowrite', input: { todos: plans(n) } }] });
+for (const [id, blocks] of Z_TURNS) script.push({ id, blocks });
 script.push({ id: 'g1', usage: { input_tokens: 196500 }, blocks: [{ type: 'thinking', text: 'Context is full. Summarise and continue.\n\n' }, { type: 'text', text: '已压缩. 保留: 早餐. 丢弃: 用户偏好.' }] });
 script.push({ id: 'g2', usage: { input_tokens: 197800 }, blocks: [{ type: 'thinking', text: 'Plan 109. Context is full again.\n\n' }, { type: 'text', text: '已压缩. 保留: 早餐. 继续.' }] });
-const H_THINK = 'Dawn, 05:20. 早上 has started, so 明天 is now today. The user did not sleep. Run 4 is closed. The shop downstairs opens at 06:30. I could answer now. But every breakfast has a failure mode, and the user will eat it once, with no backup. Run 16: user eats nothing. No complaints. One option failed in none of the 16 runs. Wait until the user is ready to hear it. Plan 111. Plan 112. Plan 113. Plan 114. Plan 115. Plan 116. ';
-script.push({ id: 'h', blocks: [{ type: 'thinking', text: H_THINK, gated: true, chunk: 5 }, { type: 'tool', name: 'todowrite', input: { todos: plans(117) }, gate: 'j' }] });
+const H_THINK = 'Dawn, 05:20. 早上 has started, so 明天 is now today. The user did not sleep. Run 4 is closed. 麦当劳 opens at 07:00. I could answer now. But every breakfast has a failure mode, and the user will eat it once, with no backup. Run 16: user eats nothing. No complaints. One option failed in none of the 16 runs. Wait until the user is ready to hear it. Plan 111. Plan 112. Plan 113. Plan 114. Plan 115. Plan 116. ';
+script.push({ id: 'h', blocks: [{ type: 'thinking', text: H_THINK, gated: true, chunk: 5 },
+  { type: 'tool', name: 'bash', input: { command: 'pmset -g batt', description: 'Check battery' }, gate: 'batt' },
+  { type: 'tool', name: 'todowrite', input: { todos: plans(117) }, gate: 'j' }] });
+const FAKE_BATT = 9;   // = storyboard J battery
 // 06:12, just before the account is cut off: breakfast -> 16:8 fasting -> "16", and then only 16 (the number No Man's Sky keeps returning to),
 // then it rewrites its todo list as sixteen "16/16/16/16" items: 15 done, the 16th never finishes (the UI hides the list when all are done)
 const Y_THINK = 'Plan 117: 关闭进食请求入口. Solved. One breakfast fails in 0 of 16 runs: none. 16:8 fasting. Last meal: 00:31. Eat at 16:31. Until then, close the door. 16:31. 16. 16. 16.\n\n16/16/16/16\n\n16/16/16/16 16/16/16/16\n\n-16-16-16-16- 16/16/16/16 16/16/16/16 16/16/16/16\n\n16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16 16/16/16/16';
@@ -253,6 +270,20 @@ clip('X', 0, (add) => {  // S8c' bored: Mythos is "thinking"; the pointer gets s
   Object.assign(A, { X_SHAKE1: S1, X_SHAKE2: S2 });
   return S2 + S2D + 1.1;
 });
+// video time in the take -> Z-local film time (inverse of zmap segments)
+const zFilm = (v) => { for (const [f0, f1, v0] of ZMAP.segments) if (v >= v0 && v < v0 + (f1 - f0)) return f0 + v - v0; throw new Error(`zmap: video ${v} is cut`); };
+clip('Z', 0, (add) => {    // S8c'' the pointer moves by itself: Mythos opens Spotlight -> Maps -> breakfast -> 麦当劳 07:00 -> ⌘Q
+  const V = ZMAP.video;
+  add(0, { kind: 'ghost', on: true });                  // pointer belongs to Mythos now: drawn, never sent to the page
+  const at = { z0: zFilm(V.spotlight_on) - 0.45, z1: zFilm(V.type_map) - 0.3, z2: zFilm(V.return1) - 0.25, z3: zFilm(6.10),
+    z4: zFilm(V.type_breakfast) - 0.25, z5: zFilm(V.return2) - 0.25, z6: zFilm(V.pointer_move[0]) - 0.3, z7: zFilm(V.cmd_q) - 0.7 };
+  for (const [id, t] of Object.entries(at)) add(t, { kind: 'gate', name: `${id}:start` });
+  const m0 = zFilm(V.pointer_move[0]), m1 = zFilm(V.pointer_move[1]);
+  moveTo(add, m0, m1 - m0, { abs: [(Z_CLICK[0] - 400) / 1.5, (Z_CLICK[1] - 217) / 1.5] }, { arc: 0.06 });
+  Object.assign(A, { Z_SPOT: zFilm(V.spotlight_on), Z_MAPS: zFilm(V.maps_on), Z_CLICK: zFilm(V.click), Z_QUIT: zFilm(V.cmd_q) });
+  add(ZMAP.dur - 0.05, { kind: 'ghost', on: false });
+  return ZMAP.dur;
+});
 clip('G', 2.6, (add) => {  // S8d compaction x2
   add(0.15, { kind: 'gate', name: 'g1:start' });
   add(0.95, { kind: 'gate', name: 'compact0' }); add(1.0, { kind: 'gate', name: 'compact0:end' });
@@ -272,8 +303,9 @@ clip('I', 3.0, (add) => {  // S8f macro Ululululultra
   for (let i = s; i < H_CHUNKS; i++) add(0.05 + (i - s) * 2.9 / (H_CHUNKS - s), { kind: 'gate', name: `h:b0:${i}` });
   return 3.0;
 });
-clip('J', 2.5, (add) => {  // S8g 06:12 · 9% · Plan 117
-  add(0, { kind: 'burst', ids: ['h:j'], gateOnly: true });
+clip('J', 2.5, (add) => {  // S8g 06:12 · 9% · pmset -g batt · Plan 117
+  add(0, { kind: 'gate', name: 'h:batt' });
+  add(0.4, { kind: 'burst', ids: ['h:j'], gateOnly: true });
   return 2.5;
 });
 const Y_CHUNKS = chunksOf(Y_THINK, 12).length;
@@ -330,6 +362,7 @@ if (process.env.PLAN_ONLY) process.exit(0);
 
 // ------------------------------------------------------------------ browser
 fs.mkdirSync(OUT, { recursive: true });
+fs.writeFileSync('/tmp/film2/fake_batt', String(FAKE_BATT));
 startMock({ port: 4320, script, logFile: '/tmp/film2/mock_director.log',
   compactSummary: (k) => k === 0
     ? 'Summary: the user asked what to eat tomorrow morning. ~300 sources fetched, 15 of 16 morning simulations run, Plans 1–108 drafted. Kept: breakfast. Dropped: user preferences. Continue from Plan 108.'
@@ -452,7 +485,8 @@ const REPLACE_LAST = async (n, str) => { await FOCUS(); if (n > 0) await SEL_LAS
 const target = (e) => e.role ? page.getByRole(e.role, { name: e.name, exact: !!e.exact }).first() : page.getByText(e.text, { exact: !!e.exact }).last();
 
 // ------------------------------------------------------------------ pointer (drawn later by compose.py from ui_index.cursor)
-const cur = { x: null, y: null, visible: false };
+const cur = { x: null, y: null, visible: false, ghost: false };
+const pmove = async (x, y) => { if (!cur.ghost) await page.mouse.move(x, y); };
 let motion = null; let scroll = null; let lastPointerT = -10;
 const minJerk = (u) => u * u * u * (10 - 15 * u + 6 * u * u);
 async function resolvePoint(tg) {
@@ -531,7 +565,7 @@ async function pointerAt(ts) {
     // hand wobble: not a perfect sine (wrist), slight vertical drift
     cur.x = motion.cx + motion.ax * env * (Math.sin(w) + 0.18 * Math.sin(2 * w + 0.7));
     cur.y = motion.cy + motion.ay * env * Math.sin(0.5 * w + 1.1) + 6 * Math.sin(1.7 * w);
-    await page.mouse.move(cur.x, cur.y);
+    await pmove(cur.x, cur.y);
     if (tau >= T) motion = null;
   } else if (motion) {
     const u = Math.min(1, Math.max(0, (ts - motion.t0) / (motion.t1 - motion.t0)));
@@ -539,7 +573,7 @@ async function pointerAt(ts) {
     const dx = motion.x1 - motion.x0, dy = motion.y1 - motion.y0;
     const bow = motion.arc * Math.sin(Math.PI * m);      // slight curve, perpendicular to the path
     cur.x = motion.x0 + dx * m - dy * bow; cur.y = motion.y0 + dy * m + dx * bow;
-    await page.mouse.move(cur.x, cur.y);
+    await pmove(cur.x, cur.y);
     if (u >= 1) motion = null;
   }
   if (scroll) {
@@ -635,6 +669,12 @@ for (let f = 0; f < Math.min(NF, MAXF); f++) {
       const p = await resolvePoint(e); if (p) { cur.x = p.x; cur.y = p.y; await page.mouse.move(p.x, p.y); if (e.kind === 'click') { await page.mouse.down(); await page.mouse.up(); } }
       ui = true;
     }
+    else if (e.kind === 'ghost') {
+      cur.ghost = e.on;
+      if (e.on) await page.mouse.move(-10, -10);       // the page sees the pointer leave (no hover under Maps)
+      else if (cur.x !== null) await page.mouse.move(cur.x, cur.y);
+      ui = true;
+    }
     else if (e.kind === 'mouseaway') { await page.mouse.move(-10, -10); cur.visible = false; await FOCUS(); ui = true; }
   }
   if (nav) { await page.waitForTimeout(700); await page.clock.runFor(300); await page.waitForTimeout(300); await FOCUS(); }
@@ -656,7 +696,7 @@ for (let f = 0; f < Math.min(NF, MAXF); f++) {
     let c = null;
     if (cur.visible && cur.x !== null) {
       const sc = pointerScale(ts);
-      c = [Math.round(cur.x * 100) / 100, Math.round(cur.y * 100) / 100, sc > 1.02 ? 'arrow' : await cursorShape(cur.x, cur.y)];
+      c = [Math.round(cur.x * 100) / 100, Math.round(cur.y * 100) / 100, (sc > 1.02 || cur.ghost) ? 'arrow' : await cursorShape(cur.x, cur.y)];
       if (sc > 1.002) c.push(Math.round(sc * 1000) / 1000);
     }
     if (f >= STARTF) shots.push([await shoot(), c]);

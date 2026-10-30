@@ -53,7 +53,7 @@ def panel_for_frame(f, sub=None):
     # cache key by composed content (ui file + pointer + clock string + battery)
     t = f / FPS
     name, cur = sub if sub else (compose.ui_name(f), compose.cursor_at(f))
-    k = (name, cur, compose.clock_string(t), compose.battery_state(f))
+    k = (name, cur, compose.clock_string(t), compose.battery_state(f), compose.zlayer_key(f))
     return _panel_by_key(k, f, sub)
 
 

@@ -1,0 +1,5 @@
+#!/bin/sh
+# Film stand-in (isolated capture instance only): scripted battery text (number in /tmp/film2/fake_batt, default 14), changes nothing.
+echo "$(date +%s) pmset $*" >> /tmp/film2/fakebin.log
+B=$(cat /tmp/film2/fake_batt 2>/dev/null || echo 14)
+printf "Now drawing from 'Battery Power'\n -InternalBattery-0 (id=4653155)\t%s%%; discharging; 0:%02d remaining present: true\n" "$B" $((B * 2))

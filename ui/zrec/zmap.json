@@ -1,0 +1,73 @@
+{
+ "note": "Clip Z: film-local time -> time in build/ztake/take.mov (60 fps). Idle stretches of the real take are cut (hard jumps on unchanged screens). Geometry in desktop px (1:1 mode, 3024x1890). Spotlight is cropped to its field + top hit row and centred; the Maps window is moved 500 px right so the tool cards stay visible. The pointer is drawn by compose from the director's cursor track, not from the take. click_dst: where the drawn pointer clicks (film desktop px): the empty right end of the first result row, so the pointer does not cover the opening hours; the take was clicked at click_src (same row).",
+ "segments": [
+  [
+   0.45,
+   4.05,
+   1.9
+  ],
+  [
+   4.05,
+   6.55,
+   6.1
+  ],
+  [
+   6.55,
+   9.75,
+   9.7
+  ],
+  [
+   9.75,
+   11.15,
+   14.2
+  ]
+ ],
+ "dur": 12.65,
+ "sp_src": [
+  80,
+  418,
+  600,
+  98
+ ],
+ "sp_dst": [
+  1212,
+  418
+ ],
+ "sp_r": 18,
+ "mp_src": [
+  1039,
+  229,
+  1442,
+  942
+ ],
+ "mp_dst": [
+  1539,
+  229
+ ],
+ "mp_r": 11,
+ "video": {
+  "spotlight_on": 2.367,
+  "type_map": 2.97,
+  "return1": 3.8,
+  "maps_on": 4.617,
+  "cmd_f": 6.33,
+  "type_breakfast": 6.76,
+  "return2": 8.09,
+  "results": 9.93,
+  "pointer_move": [
+   10.7,
+   11.49
+  ],
+  "click": 11.86,
+  "place_card": 12.17,
+  "cmd_q": 15.083
+ },
+ "click_src": [
+  1190,
+  348
+ ],
+ "click_dst": [
+  1775,
+  352
+ ]
+}

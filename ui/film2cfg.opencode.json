@@ -1,0 +1,50 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoupdate": false,
+  "share": "disabled",
+  "model": "anthropic/claude-opus-5-5",
+  "small_model": "anthropic/claude-opus-5-5",
+  "permission": {
+    "webfetch": "allow",
+    "bash": "allow"
+  },
+  "provider": {
+    "anthropic": {
+      "options": {
+        "baseURL": "http://127.0.0.1:4320/v1",
+        "apiKey": "film-mock"
+      },
+      "models": {
+        "mythos-10": {
+          "name": "Mythos 10",
+          "reasoning": true,
+          "tool_call": true,
+          "attachment": true,
+          "temperature": true,
+          "limit": {
+            "context": 200000,
+            "output": 64000
+          },
+          "variants": {
+            "ululululultra": {
+              "thinking": {
+                "type": "enabled",
+                "budgetTokens": 63999
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "mcp": {
+    "computer": {
+      "type": "local",
+      "command": [
+        "node",
+        "/path/to/ep1/ui/zrec/mcp_computer.mjs"
+      ],
+      "enabled": true
+    }
+  }
+}

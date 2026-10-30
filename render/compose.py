@@ -188,7 +188,7 @@ def _battery_img(n):
 
 
 @functools.lru_cache(maxsize=3)
-def panel_cached(uiname, clk, batt=(89, True), screen_on=True):
+def panel_cached(uiname, clk, batt=(89, True), screen_on=True, zk=None):
     P = np.zeros((PANEL_H, PANEL_W, 3), np.uint8)
     if not screen_on:
         return P
@@ -200,6 +200,8 @@ def panel_cached(uiname, clk, batt=(89, True), screen_on=True):
     region = d[WIN_Y:WIN_Y + h, WIN_X:WIN_X + w]
     ui = ui * (1 - border[..., None] * 0.22) + 255 * border[..., None] * 0.22
     region[:] = region * (1 - m[..., None]) + ui * m[..., None]
+    if zk:
+        apply_zlayers(d, zk)
     # clock
     c = _clock_img(clock_file(clk))
     a = c[..., 3:4].astype(np.float32) / 255
@@ -224,6 +226,62 @@ def panel_cached(uiname, clk, batt=(89, True), screen_on=True):
     return P
 
 
+# ---- clip Z: real Spotlight / Maps take (render/zlayers.py) laid over the desktop, under the pointer
+_ZMAP = f'{ROOT}/ui/zrec/zmap.json'
+_ZIDX = f'{B}/ztake/layers/index.json'
+_z = json.load(open(_ZMAP)) if os.path.exists(_ZMAP) else None
+_zi = json.load(open(_ZIDX)) if os.path.exists(_ZIDX) else None
+_zclip = next((c for c in _tl.get('clips', []) if c['id'] == 'Z'), None)
+
+
+def zlayer_key(f):
+    """(spotlight layer, maps layer) shown in frame f, or None outside clip Z / when nothing is open."""
+    if not (_z and _zclip):
+        return None
+    u = f / FPS - _zclip['t0']
+    if not (0 <= u < _zclip['dur']):
+        return None
+    if _zi is None:
+        raise FileNotFoundError('build/ztake/layers/index.json (run render/zlayers.py)')
+    for f0, f1, v0 in _z['segments']:
+        if f0 <= u < f1:
+            vf = int(round((v0 + u - f0) * _zi['fps']))
+            fr = _zi['frames']
+            k = str(vf) if str(vf) in fr else min(fr, key=lambda s: abs(int(s) - vf))
+            sp, mp = fr[k]
+            return (sp, mp) if (sp or mp) else None
+    return None
+
+
+@functools.lru_cache(maxsize=4)
+def _zlayer(name):
+    im = cv2.imread(f'{B}/ztake/layers/{name}', cv2.IMREAD_UNCHANGED)
+    return cv2.cvtColor(im[..., :3], cv2.COLOR_BGR2RGB).astype(np.float32), im[..., 3:4].astype(np.float32) / 255
+
+
+@functools.lru_cache(maxsize=2)
+def _zshadow(kind):
+    """soft window shadow (desktop-sized multiplier) for the layer's rounded rect at its film position."""
+    x, y = _z[f'{kind}_dst']; w, h = _z[f'{kind}_src'][2:]
+    big = np.zeros((1890, 3024), np.float32); tight = np.zeros_like(big)
+    big[y + 18:y + 18 + h, x:x + w] = 1; tight[y + 2:y + 2 + h, x:x + w] = 1
+    big = cv2.GaussianBlur(big, (0, 0), 28) * 0.5; tight = cv2.GaussianBlur(tight, (0, 0), 3) * 0.3
+    return 1 - (1 - big) * (1 - tight)
+
+
+def apply_zlayers(d, zk):
+    """d: desktop float32 RGB (1890x3024), modified in place."""
+    for kind, name in (('mp', zk[1]), ('sp', zk[0])):          # Maps first, Spotlight floats above it
+        if not name:
+            continue
+        rgb, a = _zlayer(name)
+        x, y = _z[f'{kind}_dst']; h, w = a.shape[:2]
+        d *= (1 - _zshadow(kind)[..., None])
+        sub = d[y:y + h, x:x + w]
+        hh, ww = sub.shape[:2]
+        sub[:] = sub * (1 - a[:hh, :ww]) + rgb[:hh, :ww] * a[:hh, :ww]
+
+
 def clock_file(clk):
     m = _clock['meta'].get(clk)
     if m is None:
@@ -235,7 +293,7 @@ def panel(f, sub=None):
     """sub = (ui name, cursor) of one screen refresh inside frame f; default = the frame's own."""
     t = f / FPS
     name, cur = sub if sub else (ui_name(f), cursor_at(f))
-    return draw_cursor(panel_cached(name, clock_string(t), battery_state(f)), cur)
+    return draw_cursor(panel_cached(name, clock_string(t), battery_state(f), True, zlayer_key(f)), cur)
 
 
 if __name__ == '__main__':
