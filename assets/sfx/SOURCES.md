@@ -102,3 +102,14 @@ BigSoundBank files are the site's public FLAC downloads (lossless, 48 kHz/24-bit
 - Download: https://cdn.freesound.org/previews/180/180017_2444184-hq.mp3
 - What you hear: "Lighting and Smoking a cigarette. Recorded with Neumann KMR 81 + Nagra Ares BB+." The original is mono WAV. Tags: Cigarette, joint, lighting, smoking.
 - Onsets: lighter strikes at about 1.1-1.8 s and 2.1-2.5 s, then drag and exhale activity from about 3.1 s to 9.2 s. The gaps are close to digital silence.
+
+## (d) Dawn ambience (round 9: H/K, after 05:20)
+
+### dawn_birds_bigsoundbank_1906_100-150s.flac
+- Title: Birds Waking #4
+- Author: Joseph SARDIN (BigSoundBank / LaSonotheque), sound #1906
+- Page: https://bigsoundbank.com/birds-waking-4-s1906.html
+- License (as shown, checked 2026-10-30): "CC0 (public domain): Free and royalty-free"
+- Download: https://bigsoundbank.com/UPLOAD/flac/1906.flac (6:18, stereo ORTF, 48 kHz/24-bit, MixPre-3 + Neumann KM184)
+- What you hear: "Sound ambience of countryside at dawn, the moment when the birds begin to sing spring ... May 18, 2020 at 5.30 a.m."
+- Kept here: the 100-150 s excerpt only (cut, no other processing). sound.py plays it as if through the closed window: low-passed, quiet.

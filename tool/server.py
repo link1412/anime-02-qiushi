@@ -59,9 +59,9 @@ def state():
     return {
         'storyboard': sb,
         'anchors': camera.ANCHORS,
-        'consts': {'FPS': camera.FPS, 'PP': camera.PP, 'FX_MAIN': camera.FX_MAIN, 'FX_MACRO': camera.FX_MACRO},
+        'consts': {'FPS': camera.FPS, 'PP': camera.PP, 'FX_MAIN': camera.FX_MAIN, 'FX_MACRO': camera.FX_MACRO, 'LENS_DX': camera.LENS_DX, 'LENS_DY': camera.LENS_DY, 'LENS_XFADE': camera.LENS_XFADE},
         'noise': noise,
-        'ui': {'startFrame': idx['startFrame'], 'frames': idx['frames'], 'cursor': idx.get('cursor'), 'cssScale': 1.5},
+        'ui': {'version': int(os.path.getmtime(os.path.join(ROOT, 'build/ui_index.json'))), 'startFrame': idx['startFrame'], 'frames': idx['frames'], 'cursor': idx.get('cursor'), 'cssScale': 1.5},
         'cursorMeta': json.load(open(os.path.join(ROOT, 'ref/cursor/meta.json'))),
         'clock': clock,
         'exposure': expo,
@@ -131,6 +131,16 @@ class H(BaseHTTPRequestHandler):
         if fp.endswith('.js') or fp.endswith('.mjs'):
             ctype = 'text/javascript; charset=utf-8'
         size = os.path.getsize(fp)
+        # build/ files are regenerated under the same names (ui_frames u_00010.png, audio.wav): always revalidate
+        from email.utils import formatdate, parsedate_to_datetime
+        mt = int(os.path.getmtime(fp))
+        ims = self.headers.get('If-Modified-Since')
+        if ims and not self.headers.get('Range'):
+            try:
+                if int(parsedate_to_datetime(ims).timestamp()) >= mt:
+                    self.send_response(304); self.end_headers(); return
+            except Exception:
+                pass
         rng = self.headers.get('Range')
         with open(fp, 'rb') as fh:
             if rng and rng.startswith('bytes='):
@@ -145,8 +155,8 @@ class H(BaseHTTPRequestHandler):
             self.send_header('Content-Type', ctype)
             self.send_header('Accept-Ranges', 'bytes')
             self.send_header('Content-Length', str(len(data)))
-            cache = 'no-cache' if p.startswith('/tool/') else 'max-age=3600'
-            self.send_header('Cache-Control', cache)
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('Last-Modified', formatdate(mt, usegmt=True))
             self.end_headers()
             try:
                 self.wfile.write(data)

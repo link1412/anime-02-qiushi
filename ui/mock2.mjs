@@ -63,6 +63,30 @@ export function startMock({ port = 4320, script, title = '世界上最伟大的�
     const T = script[k] || { id: `x${k}`, blocks: [{ type: 'text', text: '…' }] };
     bus.emit('main-request', k, T.id);
     if (T.startGate !== false) await gate(`${T.id}:start`);
+    if (T.error && T.think) {   // it starts thinking, then the account is cut off mid-stream (SSE error event)
+      begin(T.usage);
+      sse(res, 'content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'thinking', thinking: '', signature: '' } });
+      const ch = chunksOf(T.think, T.thinkChunk || 4);
+      for (let i = 0; i < ch.length; i++) {
+        await gate(`${T.id}:th:${i}`);
+        sse(res, 'content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking: ch[i] } });
+      }
+      if (T.answer) {   // then it finally starts answering (a text block), and is cut off mid-word
+        sse(res, 'content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'signature_delta', signature: 'film' } });
+        sse(res, 'content_block_stop', { type: 'content_block_stop', index: 0 });
+        sse(res, 'content_block_start', { type: 'content_block_start', index: 1, content_block: { type: 'text', text: '' } });
+        const tx = chunksOf(T.answer, T.answerChunk || 3);
+        for (let i = 0; i < tx.length; i++) {
+          await gate(`${T.id}:tx:${i}`);
+          sse(res, 'content_block_delta', { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: tx[i] } });
+        }
+      }
+      await gate(`${T.id}:err`);
+      sse(res, 'error', { type: 'error', error: { type: T.error.type, message: T.error.message } });
+      res.end();
+      bus.emit('main-done', k, T.id);
+      return;
+    }
     if (T.error) {
       const b = JSON.stringify({ type: 'error', error: { type: T.error.type, message: T.error.message } });
       res.writeHead(T.error.status, { 'content-type': 'application/json', 'request-id': 'req_film' + k, 'x-should-retry': 'false' });
@@ -83,6 +107,14 @@ export function startMock({ port = 4320, script, title = '世界上最伟大的�
           sse(res, 'content_block_delta', { type: 'content_block_delta', index: idx, delta: { type: 'thinking_delta', thinking: ch[i] } });
         }
         sse(res, 'content_block_delta', { type: 'content_block_delta', index: idx, delta: { type: 'signature_delta', signature: 'film' } });
+        sse(res, 'content_block_stop', { type: 'content_block_stop', index: idx });
+      } else if (B.type === 'text' && B.gated) {   // streamed answer: one delta per chunk, each behind a gate
+        sse(res, 'content_block_start', { type: 'content_block_start', index: idx, content_block: { type: 'text', text: '' } });
+        const ch = chunksOf(B.text, B.chunk || 6);
+        for (let i = 0; i < ch.length; i++) {
+          await gate(`${T.id}:b${bi}:${i}`);
+          sse(res, 'content_block_delta', { type: 'content_block_delta', index: idx, delta: { type: 'text_delta', text: ch[i] } });
+        }
         sse(res, 'content_block_stop', { type: 'content_block_stop', index: idx });
       } else if (B.type === 'text') {
         textBlock(idx, B.text);

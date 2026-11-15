@@ -15,7 +15,8 @@ TL = json.load(open(f'{ROOT}/build/timeline.json'))
 FPS = TL['FPS']
 PP = 0.1           # panel pixel pitch, mm (14" MacBook Pro, 254 ppi)
 FX_MAIN = 2760.0   # output-px focal length, 2x lens (52mm eq.)
-FX_MACRO = 2350.0  # ultra-wide macro, cropped
+FX_MACRO = 2760.0  # ultra-wide macro, cropped to the main lens' field of view (no zoom jump at the switch, like iOS)
+LENS_DX, LENS_DY, LENS_XFADE = 1.4, -0.65, 0.18   # mm viewpoint shift at a lens switch, eased over LENS_XFADE s
 
 LOW = [0.13, 0.23, 0.41, 0.67, 1.1, 1.7]
 LOWA = [1.0, 0.8, 0.55, 0.35, 0.2, 0.1]
@@ -90,6 +91,7 @@ class Clip:
         keys = sorted(c['keys'], key=lambda k: tval(k['t']))
         self.KT = np.array([tval(k['t']) for k in keys])
         self.KV = np.array([[k['x'], k['y'], k['d'], k['yaw'], k['pitch'], k['roll']] for k in keys], dtype=np.float64)
+        self.FLOW = [bool(k.get('flow')) for k in keys]   # pass through this key without stopping (see smooth_interp)
         self.macro = [(tval(a), tval(b)) for a, b in c.get('macro', [])]
         self.stop = tval(c.get('stop_tap'))
         seed = int(c.get('seed', 0))
@@ -100,11 +102,41 @@ class Clip:
         self.hunts = [(tval(h['t']), h['pts']) for h in af.get('hunts', [])]
 
     # --- framing -------------------------------------------------------------------------
+    def move_span(self, i):
+        """keys a..b of the move containing segment i: a run of segments joined by "flow" keys."""
+        a, b = i, i + 1
+        while a > 0 and self.FLOW[a]:
+            a -= 1
+        while b < len(self.KT) - 1 and self.FLOW[b]:
+            b += 1
+        return a, b
+
+    def flow_interp(self, t, a, b):
+        """one move through several keys: a single ease-in/out over the whole move, C1 Hermite spline
+        through the keys in (warped) time, distance in log space (a push-in zooms at an even rate)."""
+        KT = self.KT
+        P = self.KV.copy(); P[:, 2] = np.log(P[:, 2])
+        u = float(np.clip((t - KT[a]) / (KT[b] - KT[a]), 0, 1))
+        s = KT[a] + (KT[b] - KT[a]) * u * u * (3 - 2 * u)
+        j = int(np.clip(np.searchsorted(KT, s) - 1, a, b - 1))
+        h = KT[j + 1] - KT[j]
+        def tan(k):
+            lo, hi = max(k - 1, a), min(k + 1, b)
+            return (P[hi] - P[lo]) / (KT[hi] - KT[lo])
+        x = (s - KT[j]) / h
+        h00 = 2 * x ** 3 - 3 * x ** 2 + 1; h10 = x ** 3 - 2 * x ** 2 + x; h01 = -2 * x ** 3 + 3 * x ** 2; h11 = x ** 3 - x ** 2
+        v = h00 * P[j] + h10 * h * tan(j) + h01 * P[j + 1] + h11 * h * tan(j + 1)
+        v[2] = math.exp(v[2])
+        return v
+
     def smooth_interp(self, t):
         KT, KV = self.KT, self.KV
         if len(KT) == 1:
             return KV[0].copy()
         i = int(np.clip(np.searchsorted(KT, t) - 1, 0, len(KT) - 2))
+        a, b = self.move_span(i)
+        if b - a > 1:
+            return self.flow_interp(t, a, b)
         t0, t1 = KT[i], KT[i + 1]
         a = (t - t0) / (t1 - t0) if t1 > t0 else 0
         a = float(np.clip(a, 0, 1))
@@ -123,10 +155,12 @@ class Clip:
         dx = dy = 0.0
         ev = []
         for a, b in self.macro:
-            ev += [(a, 3.4, -1.6), (b, -3.4, 1.6)]
+            ev += [(a, LENS_DX, LENS_DY), (b, -LENS_DX, -LENS_DY)]
         for ts, sx, sy in ev:
             if t >= ts:
-                k = math.exp(-(t - ts) / 0.55)  # user re-centres
+                u = t - ts
+                r = min(1.0, u / LENS_XFADE); r = r * r * (3 - 2 * r)   # the phone cross-fades the two lenses
+                k = r * math.exp(-u / 0.55)                              # then the user re-centres
                 dx += sx * k; dy += sy * k
         return dx, dy
 

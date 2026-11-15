@@ -121,7 +121,10 @@ void main(){
     float fpView = fpOut * viewScale;           // per displayed px
     float sigCoc = uDof * A * abs(s - uFocus) / max(s, 1e-3) / 2.4 * fpOut;
     float disp = viewScale > 1.01 ? 0.42 * fpView : 0.0;
-    float sigP = sqrt(pow(0.275 * fpOut, 2.0) + sigCoc * sigCoc + disp * disp);
+    // 0.57 output px: pixel footprint (0.275) + what render.py's lens PSF, sensor/Bayer demosaic, downscale and TNR take
+    // off on top. With 0.275 alone the preview showed huge flickering colour moire near 1 panel px per output px
+    // (A, Q2 thinking, d ~ 276 mm) that the real render (render.py) does not have.
+    float sigP = sqrt(pow(0.57 * fpOut, 2.0) + sigCoc * sigCoc + disp * disp);
     float km = uPhys > 0.5 ? exp(-19.7392 * sigP * sigP) : 0.0;
     vec3 e = vec3(0.0);
     if (sigCoc > 0.5 * max(fpView, 0.6) && uTaps > 1) {

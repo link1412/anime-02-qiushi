@@ -71,6 +71,7 @@ export class Clip {
     this.keyOrder = keys.map(o => o.i);            // sorted -> raw index
     this.KT = keys.map(o => o.t);
     this.KV = keys.map(o => [o.k.x, o.k.y, o.k.d, o.k.yaw, o.k.pitch, o.k.roll]);
+    this.FLOW = keys.map(o => !!o.k.flow);
     this.macro = (c.macro || []).map(([a, b]) => [tval(a), tval(b)]);
     this.stop = tval(c.stop_tap ?? null);
     const nz = noiseBySeed[c.seed ?? 0];
@@ -82,11 +83,36 @@ export class Clip {
     this.hunts = (af.hunts || []).map(h => [tval(h.t), h.pts]);
   }
 
+  moveSpan(i) {
+    let a = i, b = i + 1;
+    while (a > 0 && this.FLOW[a]) a--;
+    while (b < this.KT.length - 1 && this.FLOW[b]) b++;
+    return [a, b];
+  }
+
+  flowInterp(t, a, b) {   // = camera.py flow_interp
+    const KT = this.KT;
+    const P = this.KV.map(v => { const w = v.slice(); w[2] = Math.log(w[2]); return w; });
+    const u = Math.min(Math.max((t - KT[a]) / (KT[b] - KT[a]), 0), 1);
+    const s = KT[a] + (KT[b] - KT[a]) * u * u * (3 - 2 * u);
+    let j = searchsortedLeft(KT, s) - 1; j = Math.min(Math.max(j, a), b - 1);
+    const h = KT[j + 1] - KT[j];
+    const tan = (k) => { const lo = Math.max(k - 1, a), hi = Math.min(k + 1, b); return P[hi].map((v, q) => (v - P[lo][q]) / (KT[hi] - KT[lo])); };
+    const x = (s - KT[j]) / h;
+    const h00 = 2 * x ** 3 - 3 * x ** 2 + 1, h10 = x ** 3 - 2 * x ** 2 + x, h01 = -2 * x ** 3 + 3 * x ** 2, h11 = x ** 3 - x ** 2;
+    const m0 = tan(j), m1 = tan(j + 1);
+    const v = P[j].map((p0, q) => h00 * p0 + h10 * h * m0[q] + h01 * P[j + 1][q] + h11 * h * m1[q]);
+    v[2] = Math.exp(v[2]);
+    return v;
+  }
+
   smoothInterp(t) {
     const KT = this.KT, KV = this.KV, n = KT.length;
     if (n === 1) return KV[0].slice();
     let i = searchsortedLeft(KT, t) - 1;
     i = Math.min(Math.max(i, 0), n - 2);
+    const [ma, mb] = this.moveSpan(i);
+    if (mb - ma > 1) return this.flowInterp(t, ma, mb);
     const t0 = KT[i], t1 = KT[i + 1];
     let a = t1 > t0 ? (t - t0) / (t1 - t0) : 0;
     a = Math.min(Math.max(a, 0), 1);
@@ -106,8 +132,12 @@ export class Clip {
   lensJump(t) {
     let dx = 0, dy = 0;
     for (const [a, b] of this.macro) {
-      for (const [ts, sx, sy] of [[a, 3.4, -1.6], [b, -3.4, 1.6]]) {
-        if (t >= ts) { const k = Math.exp(-(t - ts) / 0.55); dx += sx * k; dy += sy * k; }
+      const L = this.consts;
+      for (const [ts, sx, sy] of [[a, L.LENS_DX, L.LENS_DY], [b, -L.LENS_DX, -L.LENS_DY]]) {
+        if (t >= ts) {
+          const u = t - ts; let r = Math.min(1, u / L.LENS_XFADE); r = r * r * (3 - 2 * r);
+          const k = r * Math.exp(-u / 0.55); dx += sx * k; dy += sy * k;
+        }
       }
     }
     return [dx, dy];

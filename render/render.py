@@ -36,6 +36,7 @@ ROOT = compose.ROOT
 OUTDIR = os.environ.get('OUTDIR', f'{ROOT}/build/frames')
 # 2 = phone ISP + glass grime + lighter (render_v2); 1 = the original pipeline, bit-identical
 ISP = int(os.environ.get('ISP', '2'))
+JPEG = os.environ.get('JPEG') == '1'
 GRIME = float(os.environ.get('GRIME', '1'))     # scale for the smudge/dust layer (0 = clean glass)
 
 # sRGB -> linear LUT
@@ -494,7 +495,7 @@ def exposure_sig():
     """what the AE track depends on: camera paths, screen content, AE parameters."""
     import hashlib
     sb = camera.RIG.sb
-    cam = [[c.get(k) for k in ('id', 'dur', 'keys', 'macro', 'stop_tap', 'seed', 'clock', 'battery')] for c in sb['clips']]
+    cam = [[c.get(k) for k in ('id', 'dur', 'keys', 'macro', 'stop_tap', 'seed', 'clock', 'battery', 'ae_start', 'dawn')] for c in sb['clips']]
     if ISP >= 2:   # v2 meters the lighter reflection too
         cam.append([c.get('lighter') for c in sb['clips']])
     idx = open(f'{ROOT}/build/ui_index.json', 'rb').read()
@@ -521,7 +522,7 @@ def exposure_track(nf=None):
             # keep them coloured instead of clipping to white
             target = min(target, MACRO_EXPO_CAP)
         if clip is not last_clip:
-            cur = target * 2.2  # recording starts over-exposed, then AE settles
+            cur = target * float(clip.raw.get('ae_start', 2.2))  # recording starts over-exposed, then AE settles
             last_clip = clip
         cur = cur * math.exp(math.log(target / cur) * (1 - math.exp(-(1 / FPS) / 0.33)))
         e.append(cur)
@@ -562,7 +563,7 @@ if __name__ == '__main__':
             target = float(np.clip(AE_TARGET / max(L, 1e-4), 0.55, 3.4))
             if clip.pose(t)['macro']:
                 target = min(target, MACRO_EXPO_CAP)
-            ex[f] = target * (1 + 1.2 * math.exp(-t / 0.33))
+            ex[f] = target * (1 + (float(clip.raw.get('ae_start', 2.2)) - 1) * math.exp(-t / 0.33))
     else:
         ex = exposure_track(nf)
     frames = [int(x) for x in a.frames.split(',')] if a.frames else list(range(a.start + a.offset, nf if a.end < 0 else a.end, a.step))
@@ -576,11 +577,11 @@ if __name__ == '__main__':
             c, u = camera.RIG.locate(g)
             L = scene_luma(g) + flame_meter(g)
             tg = float(np.clip(AE_TARGET / max(L, 1e-4), 0.55, 3.4))
-            ex[g] = (min(tg, MACRO_EXPO_CAP) if c.pose(u)['macro'] else tg) * (1 + 1.2 * math.exp(-u / 0.33))
+            ex[g] = (min(tg, MACRO_EXPO_CAP) if c.pose(u)['macro'] else tg) * (1 + (float(c.raw.get('ae_start', 2.2)) - 1) * math.exp(-u / 0.33))
         return ex[g]
 
     for f in frames:
-        out = f'{OUTDIR}/f_{f:05d}.png'
+        out = f'{OUTDIR}/f_{f:05d}.' + ('jpg' if JPEG else 'png')   # JPEG=1: quick camera previews (small files)
         if os.path.exists(out) and not a.frames:
             continue
         t0 = time.time()
@@ -589,7 +590,7 @@ if __name__ == '__main__':
             for g in range(max(c.f0, f - WARM), f):
                 render(g, ex_at(g), state=tnr_state)
         im = render(f, ex_at(f), preview=a.preview, state=tnr_state)
-        tmp = out + '.tmp.png'
-        cv2.imwrite(tmp, cv2.cvtColor(im, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_PNG_COMPRESSION, 1])
+        tmp = out + '.tmp' + out[-4:]
+        cv2.imwrite(tmp, cv2.cvtColor(im, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 90] if JPEG else [cv2.IMWRITE_PNG_COMPRESSION, 1])
         os.replace(tmp, out)
         print(f'frame {f} {time.time() - t0:.2f}s', flush=True)

@@ -1,0 +1,9 @@
+# Rendering, preview and soundtrack
+numpy>=1.26
+scipy>=1.12
+opencv-python>=4.9
+soundfile>=0.12
+
+# macOS-only capture helpers
+pyobjc-framework-Cocoa>=10; sys_platform == "darwin"
+pyobjc-framework-Quartz>=10; sys_platform == "darwin"

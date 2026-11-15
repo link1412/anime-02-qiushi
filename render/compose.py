@@ -25,7 +25,10 @@ def desktop_base():
     mb = cv2.cvtColor(cv2.imread(f'{ROOT}/ref/d1.png', cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
     d[0:24, 2600:3024] = mb[0:24, 2600:3024]
     # erase original clock (keep menubar tint)
-    d[2:23, 2876:3012] = d[2:23, 2862:2876].mean(axis=1, keepdims=True).astype(np.uint8)
+    # tint = per-row median of clean menubar columns on both sides (2862/2863 still hold the control-centre icon's edge,
+    # which used to streak the patch)
+    clean = np.concatenate([d[2:23, 2866:2876], d[2:23, 3012:3022]], axis=1).astype(np.float32)
+    d[2:23, 2876:3012] = np.median(clean, axis=1, keepdims=True).round().astype(np.uint8)
     return d
 
 
@@ -138,8 +141,11 @@ def subframes(f):
     return [(n, tuple(c) if c else None) for n, c in s] if s else None
 
 
-# ---- mouse pointer: real macOS NSCursor artwork (ref/cursor, rendered at 4 px/pt); the panel is 2 px/pt
-CSS_SCALE = 1.5                 # captured window: css px -> panel px
+# ---- mouse pointer: real macOS NSCursor artwork (ref/cursor, rendered at 16 px/pt). The panel is 1 px/pt: the
+# MacBook runs at native 3024x1890 (backingScaleFactor 1; traffic lights 12 px, menubar 24 px, IME window 28 px
+# measured on it), pointer size default -> the arrow is ~1x, not Retina 2x.
+CSS_SCALE = 1.5                 # captured window: css px -> panel px (OpenCode zoom 1.5)
+PX_PER_PT = 1.0
 
 
 @functools.lru_cache(maxsize=16)
@@ -147,12 +153,12 @@ def _cursor_sprite(shape, size=1.0):
     """size > 1: macOS "shake to locate" enlargement (redrawn from vector art, so it stays sharp)."""
     meta = json.load(open(f'{ROOT}/ref/cursor/meta.json'))[shape]
     im = cv2.imread(f'{ROOT}/ref/cursor/{shape}.png', cv2.IMREAD_UNCHANGED).astype(np.float32) / 255
-    k = 2.0 * size / meta['scale']
+    k = PX_PER_PT * size / meta['scale']
     im[..., :3] *= im[..., 3:4]                                # PNG is straight alpha: premultiply before filtering
     im = cv2.resize(im, (round(im.shape[1] * k), round(im.shape[0] * k)), interpolation=cv2.INTER_AREA)
     a = im[..., 3:4]
     rgb = cv2.cvtColor(im[..., :3], cv2.COLOR_BGR2RGB)      # premultiplied
-    return rgb * 255, a, meta['hx'] * 2 * size, meta['hy'] * 2 * size
+    return rgb * 255, a, meta['hx'] * PX_PER_PT * size, meta['hy'] * PX_PER_PT * size
 
 
 def draw_cursor(P, cur):
@@ -231,7 +237,8 @@ _ZMAP = f'{ROOT}/ui/zrec/zmap.json'
 _ZIDX = f'{B}/ztake/layers/index.json'
 _z = json.load(open(_ZMAP)) if os.path.exists(_ZMAP) else None
 _zi = json.load(open(_ZIDX)) if os.path.exists(_ZIDX) else None
-_zclip = next((c for c in _tl.get('clips', []) if c['id'] == 'Z'), None)
+# the Z part (its own clip before the film-montage restructure; now the second part of take X)
+_zclip = next((p for c in _tl.get('clips', []) for p in (c.get('parts') or [c]) if p['id'] == 'Z'), None)
 
 
 def zlayer_key(f):

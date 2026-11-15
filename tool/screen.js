@@ -33,7 +33,7 @@ export class Screen {
       const r = await fetch(`/build/battery/${n}.png`);
       this.batteryImgs.set(n, { img: await createImageBitmap(await r.blob()) });
     }));
-    // mouse pointer sprites (real NSCursor artwork, 4 px/pt; panel is 2 px/pt)
+    // mouse pointer sprites (real NSCursor artwork, 16 px/pt; panel is 1 px/pt = native 3024x1890, see compose.PX_PER_PT)
     this.cursorImgs = new Map();
     await Promise.all(Object.keys(this.S.cursorMeta || {}).map(async (n) => {
       const r = await fetch(`/ref/cursor/${n}.png`);
@@ -59,9 +59,9 @@ export class Screen {
   _drawCursor(cur) {
     const m = this.S.cursorMeta[cur[2]], im = this.cursorImgs.get(cur[2]);
     if (!m || !im) return;
-    const z = cur[3] || 1, k = 2 * z / m.scale, s = this.S.ui.cssScale || 1.5;   // z: macOS shake-to-locate size
+    const PT = 1, z = cur[3] || 1, k = PT * z / m.scale, s = this.S.ui.cssScale || 1.5;   // z: macOS shake-to-locate size
     const ctx = this.winCanvas.getContext('2d');
-    ctx.drawImage(im, cur[0] * s - m.hx * 2 * z, cur[1] * s - m.hy * 2 * z, im.width * k, im.height * k);
+    ctx.drawImage(im, cur[0] * s - m.hx * PT * z, cur[1] * s - m.hy * PT * z, im.width * k, im.height * k);
   }
 
   uiName(f) {
@@ -73,7 +73,7 @@ export class Screen {
     let e = this.cache.get(name);
     if (e) { this.cache.delete(name); this.cache.set(name, e); return e; }
     e = { bmp: null };
-    e.p = fetch(`/build/ui_frames/${name}`).then(r => r.blob())
+    e.p = fetch(`/build/ui_frames/${name}?v=${this.S.ui.version || 0}`).then(r => r.blob())
       .then(b => createImageBitmap(b, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }))
       .then(bmp => { e.bmp = bmp; return bmp; });
     this.cache.set(name, e);

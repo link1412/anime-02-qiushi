@@ -1,0 +1,48 @@
+{
+  "_doc": "Film score cue sheet. Read by music/build.py (field reference in its docstring). All times are anchor expressions from build/timeline.json, so re-cuts re-fit automatically. Positions: \"17\" = bar 17, \"16+1.5\" = bar 16 + 1.5 quarters, \"b64\" = beat 64.",
+  "patch": "LA Custom C7 - Classical",
+  "master_db": -8,
+  "credit": "J. S. Bach, Goldberg Variations BWV 988 (Aria; Var. 16 Ouverture, fughetta). Note data from the Mutopia Project editions (Bach-Gesellschaft source), CC BY-SA 3.0. Performed by script, rendered with Spectrasonics Keyscape (LA Custom C7 Grand).",
+  "duck": {"keys": ["enter"], "db": -6, "attack": 0.03, "hold": 0.25, "release": 0.5},
+  "cues": [
+    {
+      "id": "aria",
+      "_why": "The question is sent (明天早上吃什么?) -> the theme enters. Bars 1-16 = first half, ending on the half cadence (unresolved) exactly when the 16s start pouring out.",
+      "score": "scores/bwv988-aria.mid",
+      "from": "1", "to": "17",
+      "pins": [["1", "C_ENTER+0.6"], ["17", "Y_TORRENT"]],
+      "rit": {"beats": 3, "amount": 0.45},
+      "dyn": {"base": 44, "tracks": {"1": 9, "2": -5}, "downbeat": 4, "random": 4, "seed": 3,
+              "curve": [["1", 0], ["9", 3], ["13", 6], ["16", 2]]},
+      "legato": 1.0,
+      "pedal": "none",
+      "humanize_ms": 6,
+      "gain_db": 0
+    },
+    {
+      "id": "var16",
+      "_why": "Var. 16 (the Ouverture that opens the second half of the Goldberg) for the 16s: its fughetta, accelerating with the scroll, cut off with the dampers when the list freezes at 15/16 (no cadence).",
+      "score": "scores/bwv988-v16.mid",
+      "from": "17", "to": {"auto": true, "bpm": 150, "min": "20", "max": "33"},
+      "pins": [["17", "Y_TORRENT"], ["END", "Y_TODO+0.4", "accel:1.6"]],
+      "dyn": {"base": 60, "tracks": {"1": 6, "2": 2}, "downbeat": 6, "random": 5, "seed": 16,
+              "curve": [["17", 0], ["29", 14]]},
+      "legato": 0.85,
+      "pedal": "none",
+      "humanize_ms": 4,
+      "stop": {"at": "Y_TODO", "mode": "release"},
+      "gain_db": 0
+    },
+    {
+      "id": "aria_da_capo",
+      "_why": "The Goldberg ends with the Aria da capo. Here it comes back after 'This organization has been disabled.' and is cut by the stop tap (sound.py zeroes everything after it).",
+      "score": "scores/bwv988-aria.mid",
+      "from": "1", "to": "5",
+      "pins": [["1", "K_ERR3+1.0"]],
+      "bpm": 50,
+      "dyn": {"base": 38, "tracks": {"1": 9, "2": -6}, "downbeat": 3, "random": 3, "seed": 5},
+      "humanize_ms": 6,
+      "gain_db": -2
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-"""Synthesised soundtrack for the phone recording (no music).
+"""Synthesised soundtrack for the phone recording (+ the film score from build/music.wav, if present).
 
 Room tone + faint fan, MacBook keyboard from timeline.json key times, phone handling
 noise driven by the camera path, a finger tap on "stop", phone-mic colouring.
@@ -19,6 +19,7 @@ from camera import TL, FPS, PP
 SR = 48000
 ROOT = os.environ.get('EP1', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ZERO_AFTER_TAP = 0.05        # digital zero from (stop tap + this) to the end of that clip
+BRIDGE = 0.32                # s: room tone crossfades across a montage cut instead of restarting from silence
 
 
 def db(x):
@@ -145,8 +146,57 @@ def handling_envelope(clip, n):
     return np.interp(np.arange(n) / SR, ts, env)
 
 
-def segment(clip, keys, rng, enter, N):
-    """one phone recording: N samples, keys = [(local t, kind)]."""
+_UIX = None
+
+
+def trackpad_envelope(clip, n):
+    """finger friction on the glass trackpad, from the user's own pointer speed (ui_index cursor track): only
+    vigorous moves (the shake-to-locate) are loud enough to hear; Mythos' pointer (clip Z, ghost) makes no sound."""
+    global _UIX
+    if _UIX is None:
+        _UIX = json.load(open(f'{ROOT}/build/ui_index.json'))
+    cur, s0 = _UIX.get('cursor') or [], _UIX.get('startFrame', 0)
+    a = TL['anchors']
+    z0 = a.get('Z_START') if clip.id == 'X' else None
+    sp = np.zeros(clip.nf)
+    for k in range(1, clip.nf):
+        f = clip.f0 + k - s0
+        if not (0 < f < len(cur)) or not cur[f] or not cur[f - 1]:
+            continue
+        if z0 is not None and k / FPS >= z0:
+            continue
+        sp[k] = math.hypot(cur[f][0] - cur[f - 1][0], cur[f][1] - cur[f - 1][1]) * FPS     # css px/s
+    env = np.clip((sp - 600) / 2600, 0, 1) ** 0.8
+    env = np.convolve(env, np.ones(3) / 3, mode='same')
+    return np.interp(np.arange(n) / SR, np.arange(clip.nf) / FPS, env, right=0.0)
+
+
+_BIRDS = None
+
+
+def dawn_level(clip):
+    d = clip.raw.get('dawn') or 0
+    return max(v for _, v in d) if isinstance(d, list) else float(d)
+
+
+def birds(clip, n, rng):
+    """dawn outside the closed window (assets/sfx, CC0): from 05:20 on. Low-passed by the glass, quiet."""
+    global _BIRDS
+    if _BIRDS is None:
+        import soundfile as sf
+        _BIRDS, sr_ = sf.read(f'{ROOT}/assets/sfx/dawn_birds_bigsoundbank_1906_100-150s.flac', dtype='float64')
+        assert sr_ == SR
+    off = int(rng.uniform(0, max(1, len(_BIRDS) - n - 1)))
+    x = _BIRDS[off:off + n]
+    if len(x) < n:
+        x = np.concatenate([x, np.zeros((n - len(x), 2))])
+    x = np.stack([lp(hp(x[:, c], 300), 3200, 4) for c in range(2)], 1)
+    return x / (np.sqrt((x ** 2).mean()) + 1e-9)
+
+
+def segment(clip, keys, rng, enter, N, fresh=True):
+    """one phone recording: N samples (may run past the clip end for a sound bridge), keys = [(local t, kind)].
+    fresh: the recording starts here (mic settles from silence); else the caller crossfades it in."""
     bus_keys = np.zeros((N, 2))
     for t, kind in keys:
         if kind == 'enter':
@@ -180,16 +230,34 @@ def segment(clip, keys, rng, enter, N):
     fan += (np.sin(2 * np.pi * 117.3 * np.arange(N) / SR) * db(-74))[:, None]
     hiss = rng.standard_normal((N, 2)) * db(-74)
 
+    # trackpad friction (the shake): broadband swish, irregular, gone the moment the hand stops
+    tpe = trackpad_envelope(clip, N)
+    if tpe.any():
+        sw = bp(rng.standard_normal(N), 700, 5500) * (0.6 + 0.4 * lp(np.abs(rng.standard_normal(N)), 30, 2) / 0.8)
+        pad = sw * tpe * db(-43)
+        pad = np.stack([pad, pad * 0.92], 1)
+    else:
+        pad = 0.0
+    # dawn outside: H fades in over its first 1.5 s (morning arrives), K keeps it lower under everything
+    dl = dawn_level(clip)
+    if dl >= 0.25:
+        b = birds(clip, N, rng) * db(-52 if clip.id == 'K' else -46)
+        if clip.id != 'K':
+            r = min(N, int(1.5 * SR)); b[:r] *= np.linspace(0, 1, r)[:, None] ** 2
+    else:
+        b = 0.0
+
     ir = room_ir(rng)
     wet = np.stack([signal.fftconvolve(bus_keys[:, c], ir[:, c])[:N] for c in range(2)], 1)
-    mix = bus_keys + 0.18 * wet + bus_tap + bus_hand + room + fan + hiss
+    mix = bus_keys + 0.18 * wet + bus_tap + bus_hand + room + fan + hiss + pad + b
     for c in range(2):                       # phone mic: HPF, presence lift, HF roll-off (linear only)
         x = hp(mix[:, c], 90, 2)
         b, a = signal.iirpeak(3500, 1.2, fs=SR)
         x = x + 0.25 * signal.lfilter(b, a, x)
         mix[:, c] = lp(x, 15000, 4)
-    ramp = int(0.06 * SR)                    # recording starts: mic settles over ~60 ms
-    mix[:ramp] *= np.linspace(0, 1, ramp)[:, None] ** 2
+    if fresh:
+        ramp = int(0.06 * SR)                # recording starts: mic settles over ~60 ms
+        mix[:ramp] *= np.linspace(0, 1, ramp)[:, None] ** 2
     if clip.stop is not None:
         z = min(N, int(round((clip.stop + ZERO_AFTER_TAP) * SR)))
         fade = int(0.004 * SR)
@@ -205,11 +273,21 @@ def main():
     total = int(round(rig.nframes / FPS * SR))
     out = np.zeros((total, 2))
     zero_ranges = []
+    nb = int(BRIDGE * SR)
     for i, clip in enumerate(rig.clips):
         s0 = int(round(clip.f0 / FPS * SR)); s1 = int(round((clip.f0 + clip.nf) / FPS * SR))
         ck = [(k['t'] - clip.t0, k['key']) for k in keys if k.get('clip', 'A') == clip.id]
         rng = np.random.default_rng(20261030 + 97 * i)
-        out[s0:s1] = segment(clip, ck, rng, enter, s1 - s0)
+        prev = rig.clips[i - 1] if i else None
+        nxt = rig.clips[i + 1] if i + 1 < len(rig.clips) else None
+        fresh = prev is None or prev.stop is not None        # after a stop tap the next recording really starts from silence
+        tail = nb if (nxt is not None and clip.stop is None) else 0
+        seg = segment(clip, ck, rng, enter, s1 - s0 + tail, fresh=fresh)
+        if not fresh:                                         # sound bridge, incoming side: equal-power fade-in
+            seg[:nb] *= np.sin(0.5 * np.pi * np.linspace(0, 1, nb))[:, None]
+        if tail:                                              # outgoing side: the room carries on past the cut (L-cut)
+            seg[s1 - s0:] *= np.cos(0.5 * np.pi * np.linspace(0, 1, tail))[:, None]
+        out[s0:s1 + tail] += seg
         # recorded effects for this clip (render/sfx.py -> build/sfx_<clip>.wav, clip-local, 48k stereo float)
         sp = f'{ROOT}/build/sfx_{clip.id}.wav'
         if clip.raw.get('lighter') and os.path.exists(sp):
@@ -221,6 +299,19 @@ def main():
             print(f'  + sfx_{clip.id}.wav ({len(st) / SR:.2f}s)')
         if clip.stop is not None:
             zero_ranges.append((s0 + int(round((clip.stop + ZERO_AFTER_TAP) * SR)), s1))
+    # film score (music/build.py -> build/music.wav, full film length, 48k stereo float). MUSIC=0 to leave it out.
+    mp = f'{ROOT}/build/music.wav'
+    if os.environ.get('MUSIC', '1') != '0' and os.path.exists(mp):
+        import scipy.io.wavfile as wf
+        sr_, mus = wf.read(mp)
+        assert sr_ == SR and mus.ndim == 2 and mus.dtype == np.float32, (sr_, mus.shape, mus.dtype)
+        if abs(len(mus) - total) > SR // 100:
+            print(f'  ! music.wav is {len(mus) / SR:.3f}s but the film is {total / SR:.3f}s: re-run bash music/run.sh')
+        n = min(len(mus), total)
+        out[:n] += mus[:n]
+        print(f'  + music.wav (peak {20 * np.log10(np.abs(mus).max() + 1e-12):.1f} dBFS)')
+    for a_, b_ in zero_ranges:                                # after a stop tap nothing survives, score included
+        out[a_:b_] = 0.0
     peak = np.abs(out).max()
     print(f'peak {20 * np.log10(peak):.1f} dBFS, dur {total / SR:.3f}s, clips {len(rig.clips)}')
     pcm = np.clip(np.round(out * 32767), -32768, 32767).astype(np.int16)

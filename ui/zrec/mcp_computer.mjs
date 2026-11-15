@@ -6,6 +6,7 @@ import readline from 'readline';
 const TOOLS = [
   { name: 'key', description: 'Press a key or key combination, e.g. "cmd+space".', inputSchema: { type: 'object', properties: { keys: { type: 'string' } }, required: ['keys'] } },
   { name: 'type', description: 'Type text with the keyboard.', inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } },
+  { name: 'move', description: 'Move the pointer to screen coordinates.', inputSchema: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } }, required: ['x', 'y'] } },
   { name: 'click', description: 'Click at screen coordinates.', inputSchema: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } }, required: ['x', 'y'] } },
 ];
 const out = (m) => process.stdout.write(JSON.stringify(m) + '\n');

@@ -1,28 +1,28 @@
 {
- "note": "Clip Z: film-local time -> time in build/ztake/take.mov (60 fps). Idle stretches of the real take are cut (hard jumps on unchanged screens). Geometry in desktop px (1:1 mode, 3024x1890). Spotlight is cropped to its field + top hit row and centred; the Maps window is moved 500 px right so the tool cards stay visible. The pointer is drawn by compose from the director's cursor track, not from the take. click_dst: where the drawn pointer clicks (film desktop px): the empty right end of the first result row, so the pointer does not cover the opening hours; the take was clicked at click_src (same row).",
+ "note": "Clip Z: film-local time -> time in build/ztake/take.mov (60 fps). Idle stretches of the real take are cut (hard jumps on unchanged screens). Geometry in desktop px (1:1 mode, 3024x1890). Spotlight is cropped to its field + top hit row and centred; the Maps window is moved 500 px right so the tool cards stay visible. The pointer is drawn by compose from the director's cursor track, not from the take. click_dst: where the drawn pointer clicks (film desktop px): the empty right end of the first result row, so the pointer does not cover the opening hours; the take was clicked at click_src (same row). Round 9: the first 1.6 s are new (the pointer moves by itself before Spotlight opens: computer_move); idle tails trimmed a little more. Old timing: segments_v1/dur_v1.",
  "segments": [
   [
-   0.45,
-   4.05,
+   1.6,
+   4.9,
    1.9
   ],
   [
-   4.05,
-   6.55,
+   4.9,
+   7.2,
    6.1
   ],
   [
-   6.55,
-   9.75,
+   7.2,
+   10.4,
    9.7
   ],
   [
-   9.75,
-   11.15,
-   14.2
+   10.4,
+   11.4,
+   14.6
   ]
  ],
- "dur": 12.65,
+ "dur": 12.9,
  "sp_src": [
   80,
   418,
@@ -69,5 +69,28 @@
  "click_dst": [
   1775,
   352
- ]
+ ],
+ "segments_v1": [
+  [
+   0.45,
+   4.05,
+   1.9
+  ],
+  [
+   4.05,
+   6.55,
+   6.1
+  ],
+  [
+   6.55,
+   9.75,
+   9.7
+  ],
+  [
+   9.75,
+   11.15,
+   14.2
+  ]
+ ],
+ "dur_v1": 12.65
 }

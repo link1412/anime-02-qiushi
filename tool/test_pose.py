@@ -23,7 +23,7 @@ for ci, t in samples:
     p = rig.clips[ci].pose(t)
     py.append(list(p['C']) + list(p['right']) + list(p['down']) + list(p['fwd']) + [p['fx'], float(p['macro']), p['dist']])
 inp = {'sb': sb, 'anchors': camera.ANCHORS, 'noise': noise,
-       'consts': {'FPS': camera.FPS, 'PP': camera.PP, 'FX_MAIN': camera.FX_MAIN, 'FX_MACRO': camera.FX_MACRO},
+       'consts': {'FPS': camera.FPS, 'PP': camera.PP, 'FX_MAIN': camera.FX_MAIN, 'FX_MACRO': camera.FX_MACRO, 'LENS_DX': camera.LENS_DX, 'LENS_DY': camera.LENS_DY, 'LENS_XFADE': camera.LENS_XFADE},
        'samples': samples}
 js = r"""
 import fs from 'fs';

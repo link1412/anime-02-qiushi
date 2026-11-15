@@ -16,7 +16,7 @@ const cur = { t: 0, f: 0, playing: false, ae: null, aeF: -1, loop: false, info: 
 let selKey = null;          // raw index into current clip's keys
 let needs = true, busy = false, lastNow = 0;
 const opts = { phys: true, blur: true, dof: true, hud: true, markers: true, half: false, mute: false };
-const audio = new Audio('/build/audio.wav');
+const audio = new Audio('/build/audio.wav?v=' + Date.now());
 audio.preload = 'auto';
 let audioOK = false;
 audio.addEventListener('canplaythrough', () => { audioOK = true; });
@@ -155,11 +155,11 @@ function exposureFor(f, loc, L, macro) {
   if (macro) target = Math.min(target, RS.MACRO_EXPO_CAP);
   let e;
   if (!dirtyA && S.exposure && f < S.exposure.length) e = S.exposure[f];
-  else if (loc.lf === 0) e = target * 2.2;
+  else if (loc.lf === 0) e = target * (loc.clip.raw?.ae_start ?? 2.2);
   else if (cur.playing && cur.aeF >= 0 && f > cur.aeF && f - cur.aeF <= 15 && rig.locate(cur.aeF).index === loc.index) {
     e = cur.ae; const k = 1 - Math.exp(-(1 / FPS) / 0.33);
     for (let i = cur.aeF; i < f; i++) e *= Math.exp(Math.log(target / e) * k);
-  } else e = target * (1 + 1.2 * Math.exp(-loc.t / 0.33));
+  } else e = target * (1 + ((loc.clip.raw?.ae_start ?? 2.2) - 1) * Math.exp(-loc.t / 0.33));
   cur.ae = e; cur.aeF = f;
   return e;
 }

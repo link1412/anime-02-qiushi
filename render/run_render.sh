@@ -3,7 +3,7 @@
 # contiguous frame range (not an interleaved one); render.py warms up 3 frames at range starts.
 # Existing frames are skipped, so rerunning resumes.  Logs/PIDs: $EP1/logs/
 set -euo pipefail
-EP1=${EP1:-/path/to/ep1}
+EP1=${EP1:-$(cd "$(dirname "$0")/.." && pwd)}
 N=${N:-8}
 PY=${PY:-$EP1/venv/bin/python3}
 cd "$EP1"

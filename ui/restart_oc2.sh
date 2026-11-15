@@ -8,7 +8,13 @@ rm -rf /tmp/film2data /tmp/film2state
 mkdir -p /tmp/film2data /tmp/film2state /tmp/film2 /tmp/film2cfg/opencode
 HERE="$(cd "$(dirname "$0")" && pwd)"
 # config (bash allowed, log-only "computer" MCP) and the stand-in caffeinate/pmset, PATH-first for this instance only
-cp "$HERE/film2cfg.opencode.json" /tmp/film2cfg/opencode/opencode.json
+python3 - "$HERE" <<'PY'
+import json, pathlib, sys
+here = pathlib.Path(sys.argv[1])
+config = json.loads((here / 'film2cfg.opencode.json').read_text())
+config['mcp']['computer']['command'] = ['node', str(here / 'zrec/mcp_computer.mjs')]
+pathlib.Path('/tmp/film2cfg/opencode/opencode.json').write_text(json.dumps(config, ensure_ascii=False, indent=2) + '\n')
+PY
 rm -rf /tmp/film2bin && cp -R "$HERE/fakebin" /tmp/film2bin && chmod +x /tmp/film2bin/*
 cd /tmp
 env -u OPENCODE_DISABLE_EMBEDDED_WEB_UI -u OPENCODE_CLIENT -u __CFBundleIdentifier XDG_CONFIG_HOME=/tmp/film2cfg XDG_DATA_HOME=/tmp/film2data XDG_STATE_HOME=/tmp/film2state XDG_CACHE_HOME=/tmp/film2cache PATH="/tmp/film2bin:$PATH" \

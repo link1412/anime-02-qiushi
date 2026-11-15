@@ -52,17 +52,20 @@ function candidates(py, phrase, prefixLen) {
 // returns events: {t, kind, ...}; kinds: comp (marked text update), commit, punct, enter, key (for audio)
 // fast = an impatient, fluent pinyin typist (the film's pacing); slow = v1 timings
 const PROFILES = {
-  slow: { word: [0.32, 0.12, 0.12, 0.8], letter: [0.125, 0.035, 0.06, 0.26], commit: [0.22, 0.08, 0.08, 0.5], punct: [0.28, 0.08, 0.12, 0.6], typoPause: [0.35, 0.1, 0.2, 0.6], back: [0.16, 0.03, 0.1, 0.25] },
-  fast: { word: [0.15, 0.05, 0.06, 0.35], letter: [0.068, 0.018, 0.04, 0.13], commit: [0.11, 0.035, 0.05, 0.25], punct: [0.15, 0.04, 0.08, 0.3], typoPause: [0.22, 0.06, 0.12, 0.35], back: [0.09, 0.02, 0.06, 0.14] },
+  slow: { word: [0.32, 0.12, 0.12, 0.8], letter: [0.125, 0.035, 0.06, 0.26], commit: [0.22, 0.08, 0.08, 0.5], punct: [0.28, 0.08, 0.12, 0.6], typoPause: [0.35, 0.1, 0.2, 0.6], back: [0.16, 0.03, 0.1, 0.25], pick: [0.5, 0.1, 0.35, 0.8] },
+  fast: { word: [0.15, 0.05, 0.06, 0.35], letter: [0.068, 0.018, 0.04, 0.13], commit: [0.11, 0.035, 0.05, 0.25], punct: [0.15, 0.04, 0.08, 0.3], typoPause: [0.22, 0.06, 0.12, 0.35], back: [0.09, 0.02, 0.06, 0.14], pick: [0.32, 0.06, 0.22, 0.45] },
 };
 export function buildTyping(startT, seq, seed, profile = 'fast') {
   const P = PROFILES[profile];
   const rnd = mulberry32(seed); const ev = []; let t = startT;
   const gauss = () => { let u = 0, v = 0; while (u === 0) u = rnd(); while (v === 0) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
   const dt = (mu, sd, lo, hi) => Math.min(hi, Math.max(lo, mu + sd * gauss()));
+  let prev = null;
   for (const item of seq) {
+    const rep = prev && prev.punct && item.punct === prev.punct; prev = item;
     if (item.pause) { t += item.pause; continue; }
-    if (item.punct) { t += dt(...P.punct); ev.push({ t, kind: 'punct', text: item.punct, key: 'punct' }); continue; }
+    // a run of the same punctuation (???) is hammered at letter speed
+    if (item.punct) { t += rep ? dt(...PROFILES.fast.letter) : dt(...P.punct); ev.push({ t, kind: 'punct', text: item.punct, key: 'punct' }); continue; }
     const { py, zh, typo, pick } = item;
     t += dt(...P.word);
     let typed = '';
@@ -73,7 +76,7 @@ export function buildTyping(startT, seq, seed, profile = 'fast') {
       const rest = py.slice(typed.length); typeLetters(rest);
     } else typeLetters(py);
     t += dt(...P.commit);
-    if (pick) { ev.push({ t, kind: 'comp', py, zh, typed, key: 'letter', sel: pick }); t += dt(...P.commit); }
+    if (pick) t += dt(...P.pick);   // looks along the candidate bar, then presses the number key: commits at once (no highlight)
     ev.push({ t, kind: 'commit', py, zh, key: pick ? 'letter' : 'space' });
   }
   return { events: ev, end: t };
@@ -94,7 +97,8 @@ export function compView(py, typed, zh) {
   const ok = py.startsWith(typed);
   const shown = ok ? display(py, typed.length) : typed;
   const cands = ok ? candidates(py, zh, typed.length) : [typed.slice(0, 1) === 'z' ? '证' : '正', '整', '政', '争', '正名'];
-  return { marked: shown, cands };
+  // ime = key into assets/ime (real ITABC candidate-window capture for exactly this composition state)
+  return { marked: shown, cands, ime: typed };
 }
 
 export const Q1 = [
@@ -103,18 +107,18 @@ export const Q1 = [
   { py: 'buxuyao', zh: '不需要' }, { py: 'liyou', zh: '理由' }, { punct: ',' }, { pause: 0.2 }, { py: 'zhijie', zh: '直接' },
   { py: 'huida', zh: '回答' }, { py: 'wo', zh: '我' }, { punct: '.' },
 ];
-// 英特纳雄耐尔 is not in the IME's dictionary: typed in chunks, the 2nd candidate picked twice
+// 英特纳雄耐尔 is not in the IME's dictionary: typed in chunks; for naxiong the real ITABC lists 那熊 first, 纳雄 is no. 5
 export const Q3 = [
-  { py: 'yingte', zh: '英特' }, { py: 'naxiong', zh: '纳雄', pick: 2 }, { py: 'naier', zh: '耐尔', pick: 2 },
+  { py: 'yingte', zh: '英特' }, { py: 'naxiong', zh: '纳雄', pick: 5 }, { py: 'naier', zh: '耐尔' },
   { py: 'shifou', zh: '是否' }, { py: 'neng', zh: '能' }, { py: 'shixian', zh: '实现' }, { punct: '?' },
 ];
-// clip C, first try (selected and deleted at once): 这个世界是模拟出来的吗?  (模拟 is the IME's 2nd candidate)
-export const Q0 = [{ py: 'zhege', zh: '这个' }, { py: 'shijie', zh: '世界' }, { py: 'shi', zh: '是' }, { py: 'moni', zh: '模拟', pick: 2 },
+// clip C, first try (selected and deleted at once): 这个世界是模拟出来的吗?
+export const Q0 = [{ py: 'zhege', zh: '这个' }, { py: 'shijie', zh: '世界' }, { py: 'shi', zh: '是' }, { py: 'moni', zh: '模拟' },
   { py: 'chulai', zh: '出来' }, { py: 'de', zh: '的' }, { py: 'ma', zh: '吗' }, { punct: '?' }];
 // third try, sent: typed after 英特纳雄耐尔是否能实现? was deleted character by character
 export const Q4 = [{ py: 'mingtian', zh: '明天' }, { py: 'zaoshang', zh: '早上' }, { py: 'chishenme', zh: '吃什么' }, { punct: '?' }];
 // clip K, the last message (answer: This organization has been disabled. = 闭门羹)
-export const Q5 = [{ py: 'zaoshang', zh: '早上' }, { py: 'chishenme', zh: '吃什么' }, { punct: '?' }];
+export const Q5 = [{ py: 'zaoshang', zh: '早上' }, { py: 'chishenme', zh: '吃什么' }, { punct: '?' }, { punct: '?' }, { punct: '?' }, { punct: '?' }, { punct: '?' }];
 export const Q2 = [
   { py: 'youren', zh: '有人' }, { py: 'hui', zh: '会' }, { py: 'buxin', zh: '不信' }, { punct: ',' }, { pause: 0.25 },
   { py: 'wo', zh: '我' }, { py: 'ruhe', zh: '如何' }, { py: 'zhengming', zh: '证明', typo: { wrong: 'zhengmign', back: 2 } },

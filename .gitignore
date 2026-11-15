@@ -1,11 +1,30 @@
-# large / generated / private
-build/
-cache/
-preview/
-/ref
-storyboard_history/
-ui/node_modules
-ui/*.png
-**/__pycache__/
-*.pyc
+# Generated frames, caches, previews and finished films
+/build/
+/cache/
+/preview/
+/out/
+/logs/
+/storyboard_history/
+/music/bin/
+/music/cache/
+/music/work/
+
+# Original desktop captures and local browser state
+/ref/
+/ui/state.json
+/ui/*.png
+
+# Dependencies and local configuration
+node_modules/
+/venv/
+/.venv/
+__pycache__/
+*.py[cod]
 .DS_Store
+.env
+.env.*
+*.log
+*.pid
+*.key
+*.pem
+*.crt
