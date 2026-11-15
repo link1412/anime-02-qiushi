@@ -1,8 +1,8 @@
 # 实事求是 · Qiushi
 
-[![实事求是](docs/cover.jpg)](https://github.com/link1412/anime-02-qiushi/releases/latest)
+![实事求是](docs/cover.jpg)
 
-**[下载成片](https://github.com/link1412/anime-02-qiushi/releases/latest) · 3 分 16 秒 · 1920×1080 · 30 fps**
+**动画短片制作源码 · 片长 3 分 16 秒 · 1920×1080 · 30 fps**
 
 我问它：世界上最伟大的四个字是什么？不需要理由，直接回答。
 它说：实事求是。
@@ -71,7 +71,7 @@ venv/bin/python music/build.py --plan
 
 公开仓库保存源码、分镜、输入法与音效素材、乐谱和封面。**完整复现还需要本地桌面素材、界面帧与聚焦 / 地图录屏**，这些文件未随源码发布；当前本地目录也缺少最终 `build/ui_frames/`。因此仅克隆仓库不能直接重新渲染同一份成片。所需文件与生成顺序见[复现说明](docs/reproduction.md)。
 
-成片放在 [GitHub Releases](https://github.com/link1412/anime-02-qiushi/releases)，不放入 Git 历史。缓存、渲染帧、原始桌面截图、浏览器本地状态和商业音源不随本次整理新增发布；既有 24 次源码提交保留。
+本仓库只分享制作源码，不上传成片。缓存、渲染帧、原始桌面截图、当前浏览器本地状态和商业音源不纳入最新源码树；既有 24 次制作提交保留。
 
 ## 素材与许可
 
@@ -83,4 +83,4 @@ venv/bin/python music/build.py --plan
 
 The phone footage is rendered. OpenCode is driven by a scripted local mock server: replies, reasoning, tool calls and errors are written in advance. The fictional model, effort label and displayed prices are part of the story. Spotlight and Maps use separately recorded macOS footage; candidate windows and some interface details use system captures. Sound is synthesised apart from documented CC0 recordings. Bach's Goldberg Variations are performed by script using a separately licensed Keyscape installation.
 
-This repository contains the production source, storyboard and documented assets. Original desktop captures and intermediate screen frames are not bundled, so this is a source archive with documented reproduction steps, not a self-contained render package. See [reproduction notes](docs/reproduction.md), [credits](docs/credits.md) and [film downloads](https://github.com/link1412/anime-02-qiushi/releases/latest).
+This repository contains the production source, storyboard and documented assets. Original desktop captures and intermediate screen frames are not bundled, so this is a source archive with documented reproduction steps, not a self-contained render package. The finished film is not uploaded to this repository. See [reproduction notes](docs/reproduction.md) and [credits](docs/credits.md).
